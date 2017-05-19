@@ -1,0 +1,494 @@
+/******************************************************************************
+ * Product: Adempiere ERP & CRM Smart Business Solution                       *
+ * Copyright (C) 1999-2006 ComPiere, Inc. All Rights Reserved.                *
+ * This program is free software; you can redistribute it and/or modify it    *
+ * under the terms version 2 of the GNU General Public License as published   *
+ * by the Free Software Foundation. This program is distributed in the hope   *
+ * that it will be useful, but WITHOUT ANY WARRANTY; without even the implied *
+ * warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.           *
+ * See the GNU General Public License for more details.                       *
+ * You should have received a copy of the GNU General Public License along    *
+ * with this program; if not, write to the Free Software Foundation, Inc.,    *
+ * 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA.                     *
+ * For the text or an alternative of this public license, you may reach us    *
+ * ComPiere, Inc., 2620 Augustine Dr. #245, Santa Clara, CA 95054, USA        *
+ * or via info@compiere.org or http://www.compiere.org/license.html           *
+ *****************************************************************************/
+package org.adempiere.model;
+
+import java.math.BigDecimal;
+import java.sql.Timestamp;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.List;
+
+import org.compiere.acct.Doc;
+import org.compiere.acct.Fact;
+import org.compiere.acct.FactLine;
+import org.compiere.model.MAccount;
+import org.compiere.model.MAcctSchema;
+import org.compiere.model.MAllocationHdr;
+import org.compiere.model.MAllocationLine;
+import org.compiere.model.MBankAccount;
+import org.compiere.model.MCash;
+import org.compiere.model.MClient;
+import org.compiere.model.MCostDetail;
+import org.compiere.model.MDocType;
+import org.compiere.model.MInvoice;
+import org.compiere.model.MInvoiceLine;
+import org.compiere.model.MLandedCostAllocation;
+import org.compiere.model.MPayment;
+import org.compiere.model.MPaymentAllocate;
+import org.compiere.model.MProductPO;
+import org.compiere.model.MRequisitionLine;
+import org.compiere.model.MRole;
+import org.compiere.model.ModelValidationEngine;
+import org.compiere.model.ModelValidator;
+import org.compiere.model.PO;
+import org.compiere.model.Query;
+import org.compiere.util.CLogger;
+import org.compiere.util.Env;
+
+
+
+/**
+ *	Validator Example Implementation
+ *	
+ *	@author Jorg Janke
+ *	@version $Id: MyValidator.java,v 1.2 2006/07/30 00:51:57 jjanke Exp $
+ */
+public class SHWValidator_BASICS implements ModelValidator
+{
+	/**
+	 *	Constructor.
+	 */
+	public SHWValidator_BASICS ()
+	{
+		super ();
+	}	//	MyValidator
+	
+	/**	Logger			*/
+	private static CLogger log = CLogger.getCLogger(SHWValidator_BASICS.class);
+	/** Client			*/
+	private int		m_AD_Client_ID = -1;
+	/** User	*/
+	private int		m_AD_User_ID = -1;
+	/** Role	*/
+	private int		m_AD_Role_ID = -1;
+	
+	/**
+	 *	Initialize Validation
+	 *	@param engine validation engine 
+	 *	@param client client
+	 */
+	public void initialize (ModelValidationEngine engine, MClient client)
+	{
+		//client = null for global validatorALG
+		if (client != null) {	
+			m_AD_Client_ID = client.getAD_Client_ID();
+			log.info(client.toString());
+		}
+		else  {
+			log.info("Initializing global validator: "+this.toString());
+		}
+		
+		//	We want to be informed when C_Order is created/changed
+		engine.addDocValidate(MPayment.Table_Name, this);
+		engine.addDocValidate(MAllocationHdr.Table_Name, this);
+		engine.addDocValidate(MInvoice.Table_Name, this);
+		engine.addModelChange(MInvoiceLine.Table_Name, this);
+		engine.addModelChange(MRequisitionLine.Table_Name, this);
+	}	//	initialize
+
+    /**
+     *	Model Change of a monitored Table.
+     *	Called after PO.beforeSave/PO.beforeDelete
+     *	when you called addModelChange for the table
+     *	@param po persistent object
+     *	@param type TYPE_
+     *	@return error message or null
+     *	@exception Exception if the recipient wishes the change to be not accept.
+     */
+	public String modelChange (PO po, int type) throws Exception
+	{
+		String error = null;
+		if (type == ModelValidator.TYPE_AFTER_DELETE) {
+			
+		}
+		if (type == ModelValidator.TYPE_BEFORE_DELETE)
+		{
+			if (po.get_TableName().equals(MInvoiceLine.Table_Name))
+				InvoiceLineBeforeDelete(po);
+		}
+		if (type == ModelValidator.TYPE_BEFORE_NEW || type == ModelValidator.TYPE_BEFORE_CHANGE)
+		{
+			if (po.get_TableName().equals(MRequisitionLine.Table_Name))
+				error = RequisitionUpdatePriceLineNetamt(po);
+		}
+		
+		
+		return error;
+	}	//	modelChange
+	
+	/**
+	 *	Validate Document.
+	 *	Called as first step of DocAction.prepareIt 
+     *	when you called addDocValidate for the table.
+     *	Note that totals, etc. may not be correct.
+	 *	@param po persistent object
+	 *	@param timing see TIMING_ constants
+     *	@return error message or null
+	 */
+	public String docValidate (PO po, int timing)
+	{
+		String error = null;
+		if (timing == TIMING_AFTER_COMPLETE)
+		 {
+			if (po.get_TableName().equals(MPayment.Table_Name))
+				error = PaymentUpdatePrepayment(po);
+			if (po.get_TableName().equals(MInvoice.Table_Name))
+				error = InvoiceUpdateM_Product_PO(po);
+		 }
+		
+		if (timing == TIMING_AFTER_POST)
+		{
+		}
+		if (timing == TIMING_BEFORE_POST){
+			if (po.get_TableName().equals(MPayment.Table_Name))
+				error = updatePostingPayment(po);
+			if (po.get_TableName().equals(MAllocationHdr.Table_Name))
+				error = updatePostingAllocation(po);
+		}
+
+		
+		
+		return error;
+	}	//	docValidate
+	
+	/**
+	 *	User Login.
+	 *	Called when preferences are set
+	 *	@param AD_Org_ID org
+	 *	@param AD_Role_ID role
+	 *	@param AD_User_ID user
+	 *	@return error message or null
+	 */
+	public String login (int AD_Org_ID, int AD_Role_ID, int AD_User_ID)
+	{
+		log.info("AD_User_ID=" + AD_User_ID);
+		m_AD_User_ID = AD_User_ID;
+		m_AD_Role_ID = AD_Role_ID;
+		return null;
+	}	//	login
+
+	/**
+	 *	Get Client to be monitored
+	 *	@return AD_Client_ID client
+	 */
+	public int getAD_Client_ID()
+	{
+		return m_AD_Client_ID;
+	}	//	getAD_Client_ID
+
+	
+	/**
+	 * 	String Representation
+	 *	@return info
+	 */
+	public String toString ()
+	{
+		StringBuffer sb = new StringBuffer ("SHWValidator");
+		sb.append ("]");
+		return sb.toString ();
+	}	//	toString
+
+	/**
+	 * Sample Validator Before Save Properties - to set mandatory properties on users
+	 * avoid users changing properties
+	 */
+	public void beforeSaveProperties() {
+		// not for SuperUser or role SysAdmin
+		if (   m_AD_User_ID == 0  // System
+			|| m_AD_User_ID == 100   // SuperUser
+			|| m_AD_Role_ID == 0  // System Administrator
+			|| m_AD_Role_ID == 1000000)  // ECO Admin
+			return;
+
+		log.info("Setting default Properties");
+
+		MRole role = MRole.get(Env.getCtx(), m_AD_Role_ID);
+
+		// Example - if you don't want user to select auto commit property
+		// Ini.setProperty(Ini.P_A_COMMIT, false);
+		
+		// Example - if you don't want user to select auto login
+		// Ini.setProperty(Ini.P_A_LOGIN, false);
+
+		// Example - if you don't want user to select store password
+		// Ini.setProperty(Ini.P_STORE_PWD, false);
+
+		// Example - if you want your user inherit ALWAYS the show accounting from role
+		// Ini.setProperty(Ini.P_SHOW_ACCT, role.isShowAcct());
+		
+		// Example - if you want to avoid your user from changing the working date
+		/*
+		Timestamp DEFAULT_TODAY =	new Timestamp(System.currentTimeMillis());
+		//  Date (remove seconds)
+		DEFAULT_TODAY.setHours(0);
+		DEFAULT_TODAY.setMinutes(0);
+		DEFAULT_TODAY.setSeconds(0);
+		DEFAULT_TODAY.setNanos(0);
+		Ini.setProperty(Ini.P_TODAY, DEFAULT_TODAY.toString());
+		Env.setContext(Env.getCtx(), "#Date", DEFAULT_TODAY);
+		*/
+
+	}	// beforeSaveProperties
+
+	
+	
+	
+//-----------------------------------------------------------------------------------	
+	
+	private String updatePostingPayment(PO A_PO)
+	{
+		String error = "";
+
+		MPayment pay = (MPayment)A_PO;
+		Boolean isEmployee = pay.getC_BPartner().isEmployee();
+		Boolean isPrepayment = pay.isPrepayment();
+		Boolean istoUpdate = isEmployee && isPrepayment;
+		Boolean isreceipt = pay.getC_DocType().getDocBaseType().equals(MDocType.DOCBASETYPE_ARInvoice);
+		if (!istoUpdate)
+			return "";
+		Doc doc = pay.getDoc();
+
+		ArrayList<Fact> facts = doc.getFacts();
+		// one fact per acctschema
+		for (int i = 0; i < facts.size(); i++)
+		{
+			Fact fact = facts.get(i);
+			MAcctSchema as = fact.getAcctSchema();
+			MAccount Prepayment = null;
+			if (isreceipt)
+				Prepayment = doc.getAccount(Doc.ACCTTYPE_C_Prepayment, as);
+			else
+				Prepayment = doc.getAccount(Doc.ACCTTYPE_V_Prepayment, as);
+			MAccount Emp_PrePayment =  doc.getAccount(Doc.ACCTTYPE_e_prepayment_acct, as);
+			for (FactLine fline : fact.getLines())
+			{
+				if (fline.getAccount_ID() != Prepayment.getAccount_ID())
+					continue;
+				fline.setAccount_ID(Emp_PrePayment.getAccount_ID());
+			}			
+		}		
+		return error;
+	}
+	
+	
+
+	private String updatePostingAllocation(PO A_PO)
+	{
+		String error = "";
+		MAllocationHdr ah = (MAllocationHdr)A_PO;
+		Doc doc = ah.getDoc();
+		for (MAllocationLine aLine : ah.getLines(true))
+		{
+			if (aLine.getC_Payment_ID() == 0 || aLine.getC_Invoice_ID() == 0)
+				continue;
+			MPayment pay = (MPayment)aLine.getC_Payment();
+			Boolean isEmployee = pay.getC_BPartner().isEmployee();
+			Boolean isPrepayment = pay.isPrepayment();
+			MInvoice invoice = (MInvoice)aLine.getC_Invoice();
+			Boolean istoUpdate = (isEmployee && isPrepayment) || invoice.get_ValueAsBoolean("isContract");
+			Boolean isreceipt = pay.getC_DocType().getDocBaseType().equals(MDocType.DOCBASETYPE_ARInvoice);
+			if (!istoUpdate)
+				continue;
+
+			ArrayList<Fact> facts = doc.getFacts();
+			for (int i = 0; i < facts.size(); i++)
+			{
+				MAccount Prepayment = null;
+				Fact fact = facts.get(i);
+				MAcctSchema as = fact.getAcctSchema();
+				doc.setC_BPartner_ID(aLine.getC_BPartner_ID());
+
+				if (isPrepayment)
+				{
+					if (isreceipt)
+						Prepayment = doc.getAccount(Doc.ACCTTYPE_C_Prepayment, as);
+					else
+						Prepayment = doc.getAccount(Doc.ACCTTYPE_V_Prepayment, as);					
+				}
+				else
+				{
+					if (isreceipt)
+						Prepayment = doc.getAccount(Doc.ACCTTYPE_UnallocatedCash, as);
+					else
+						Prepayment = doc.getAccount(Doc.ACCTTYPE_PaymentSelect, as);					
+				}					
+				doc.setC_BPartner_ID(aLine.getC_Payment().getC_BPartner_ID());
+				MAccount Emp_PrePayment = null;
+				if (isEmployee)
+					Emp_PrePayment =  doc.getAccount(Doc.ACCTTYPE_e_prepayment_acct, as);
+					
+				for (FactLine fline : fact.getLines())
+				{
+					if (fline.getLine_ID() != aLine.getC_AllocationLine_ID())
+						continue;
+					if (fline.getAccount_ID() != Prepayment.getAccount_ID())
+						continue;
+					fline.setAccount_ID(Emp_PrePayment.getAccount_ID());
+					fline.setC_BPartner_ID(pay.getC_BPartner_ID());
+				}	
+			}
+			// one fact per acctschema
+		}		
+		return error;
+	}
+	
+	private String PaymentUpdatePrepayment(PO A_PO)
+	{
+		MPayment pay = (MPayment)A_PO;
+		MPaymentAllocate[] pAllocs = MPaymentAllocate.get(pay);
+		int pas = pAllocs.length;
+		Boolean isEmployee = pay.getC_BPartner().isEmployee();
+		Boolean isfreePayment = pay.getC_Charge_ID() == 0 && pay.getC_Invoice_ID() == 0 && isEmployee && pas == 0;
+		if (isfreePayment){
+			pay.setIsPrepayment(true);	
+			pay.saveEx();
+			return"";
+		}	
+		if (pay.getC_Charge_ID() == 0 && pay.getC_Invoice_ID() != 0 && pay.getC_Order_ID()!= 0)
+		{
+			pay.setIsPrepayment(false);
+		}
+		return "";
+	}
+	
+
+	
+	
+	
+
+	private String test(PO A_PO)
+	{
+		MCash cash = (MCash)A_PO;
+		String whereClause ="C_CashBook_ID=? AND Processed='N'";
+		
+		MCash cashOpen = new Query(A_PO.getCtx(), MCash.Table_Name, whereClause, A_PO.get_TrxName())
+			.setParameters(cash.getC_CashBook_ID())
+			.first();
+		if (cashOpen != null)
+			return "La caja ya esta abierta";
+		String StringDate = new SimpleDateFormat("yyyy/MM/dd").format(cash.getStatementDate()); 
+		String name = StringDate + " " + cash.getC_CashBook().getName();
+		cash.setName(name);
+		
+		return "";
+	}
+	
+	private String InvoiceLineBeforeDelete(PO A_PO)
+	{
+		MInvoiceLine ivl = (MInvoiceLine)A_PO;
+		MLandedCostAllocation[] lcas = MLandedCostAllocation.getOfInvoiceLine(A_PO.getCtx(), ivl.getC_InvoiceLine_ID(), A_PO.get_TrxName());
+		String whereClause = "c_invoiceline_ID=?";
+		List<MCostDetail> cds = new Query(A_PO.getCtx(), MCostDetail.Table_Name,whereClause , A_PO.get_TrxName())
+			.setParameters(ivl.getC_InvoiceLine_ID())
+			.list();
+	for (MCostDetail cd:cds)
+		cd.deleteEx(true);
+		for (MLandedCostAllocation lca:lcas)
+		{
+			
+			lca.deleteEx(true);
+		}
+		return "";
+	}
+	
+
+	private String InvoiceUpdateM_Product_PO(PO A_PO)
+	{
+		
+		MInvoice invoice = (MInvoice)A_PO;
+		if (invoice.isSOTrx())
+			return "";
+		final String whereClause = "M_Product_ID=?  and c_bpartner_ID =" + invoice.getC_BPartner_ID(); 
+		for (MInvoiceLine ivl:invoice.getLines())
+		{
+			if (ivl.getM_Product_ID()==0)
+				continue;
+			MProductPO ppo = new Query(A_PO.getCtx(), MProductPO.Table_Name, whereClause, A_PO.get_TrxName())
+										.setParameters(ivl.getM_Product_ID())
+										.setOnlyActiveRecords(true)
+										.setOrderBy("isdiscontinued desc")
+										.first();
+			if (ppo==null)
+			{
+				ppo = new MProductPO(A_PO.getCtx(), 0, A_PO.get_TrxName());
+				ppo.setC_BPartner_ID(invoice.getC_BPartner_ID());
+				ppo.setM_Product_ID(ivl.getM_Product_ID());
+				ppo.setC_UOM_ID(ivl.getM_Product().getC_UOM_ID());
+				ppo.setVendorProductNo(ivl.getM_Product().getValue());
+				ppo.setPriceList(ivl.getPriceActual());
+				ppo.setC_Currency_ID(invoice.getC_Currency_ID());
+				ppo.saveEx();
+			}
+			if (ppo.isDiscontinued())
+			{
+				ppo.setDiscontinued(false);
+				ppo.saveEx();
+			}
+		}
+		return "";
+	}
+	
+	
+	private String RequisitionUpdatePriceLineNetamt(PO A_PO)
+	{
+		MRequisitionLine rLine = (MRequisitionLine)A_PO;
+		if (A_PO.is_ValueChanged(MRequisitionLine.COLUMNNAME_M_Product_ID) || rLine.getC_BPartner_ID() == 0)
+		{
+			MProductPO[] ppos = MProductPO.getOfProduct(A_PO.getCtx(), rLine.getM_Product_ID(), A_PO.get_TrxName());
+			for (MProductPO ppo:ppos)
+			{
+					rLine.setC_BPartner_ID(ppo.getC_BPartner_ID());
+					if (rLine.getC_BPartner().getPO_PriceList_ID() != 0)
+					{
+						rLine.setPrice(rLine.getC_BPartner().getPO_PriceList_ID());
+						rLine.setLineNetAmt();
+					}
+					
+					break;
+			}
+		}
+		if (A_PO.is_ValueChanged(MRequisitionLine.COLUMNNAME_Qty) 
+				&& rLine.getC_BPartner_ID() != 0)
+			rLine.setLineNetAmt();
+		return "";
+	}
+	
+	
+	
+
+
+
+
+
+	
+	
+	
+
+
+	
+
+
+
+	
+	
+	
+	
+	
+	
+
+
+}	//	MyValidator

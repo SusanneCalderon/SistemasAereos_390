@@ -1,0 +1,443 @@
+/**********************************************************************
+* This file is part of Adempiere ERP Bazaar                           *
+* http://www.adempiere.org                                            *
+*                                                                     *
+* Copyright (C) Contributors                                          *
+*                                                                     *
+* This program is free software; you can redistribute it and/or       *
+* modify it under the terms of the GNU General Public License         *
+* as published by the Free Software Foundation; either version 2      *
+* of the License, or (at your option) any later version.              *
+*                                                                     *
+* This program is distributed in the hope that it will be useful,     *
+* but WITHOUT ANY WARRANTY; without even the implied warranty of      *
+* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the        *
+* GNU General Public License for more details.                        *
+*                                                                     *
+* You should have received a copy of the GNU General Public License   *
+* along with this program; if not, write to the Free Software         *
+* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,          *
+* MA 02110-1301, USA.                                                 *
+*                                                                     *
+* Contributors:                                                       *
+* - Carlos Ruiz - globalqss                                           *
+**********************************************************************/
+package org.adempiere.process;
+
+import java.math.BigDecimal;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.logging.Level;
+
+import org.compiere.model.X_I_ProductPriceRate;
+import org.compiere.model.MPriceList;
+import org.compiere.model.MPriceListVersion;
+import org.compiere.model.MProductPrice;
+import org.compiere.model.X_I_PriceList;
+import org.compiere.model.X_I_Product;
+import org.compiere.model.X_M_ProductPriceVendorBreak;
+import org.compiere.process.ProcessInfoParameter;
+import org.compiere.process.SvrProcess;
+import org.compiere.util.AdempiereUserError;
+import org.compiere.util.DB;
+import org.compiere.util.Env;
+
+/**
+ *	Import Price Lists from I_PriceList
+ *
+ * 	@author 	Susanne Calderon
+ */
+public class ImportProductPriceRate extends SvrProcess implements ImportProcess
+{
+	/**	Client to be imported to		*/
+	private int				m_AD_Client_ID = 0;
+	/**	Delete old Imported				*/
+	private boolean			m_deleteOldImported = false;
+	
+	private boolean			p_validateValues  = true;
+	private String 				p_LG_TransportType = "";
+	private String 				p_LG_ShippingMode = "";
+	private int					p_C_BPartner_ID = 0;
+	private int 					p_M_Product_0_ID= 0;
+	private int 					p_M_Product_1_ID= 0;
+	private int 					p_M_Product_2_ID= 0;
+	private int 					p_M_Product_3_ID= 0;
+	private int 					p_M_Product_4_ID= 0;
+	private int 					p_M_Product_5_ID= 0;
+	
+	private int 					p_surcharge_0_ID= 0;
+	private int 					p_surcharge_1_ID= 0;
+	private int 					p_surcharge_2_ID= 0;
+	private int 					p_surcharge_3_ID= 0;
+	private int 					p_surcharge_4_ID= 0;
+	private int 					p_surcharge_5_ID= 0;
+	private int 					p_C_UOM_Volume_ID = 0;
+	private int 					p_C_UOM_Weight_ID = 0;
+	private 	String 				clientCheck = " AND AD_Client_ID in (0, " + Env.getAD_Client_ID(getCtx()) + ")";
+	
+	/**
+	 *  Prepare - e.g., get Parameters.
+	 */
+	protected void prepare()
+	{
+		ProcessInfoParameter[] para = getParameter();
+		for (int i = 0; i < para.length; i++)
+		{
+			String name = para[i].getParameterName();
+			
+			if (name.equals("DeleteOldImported"))
+				m_deleteOldImported = "Y".equals(para[i].getParameter());
+			else if (name.equals("C_BPartner_ID"))
+				p_C_BPartner_ID = para[i].getParameterAsInt();
+			else if (name.equals("LG_TransportType"))
+				p_LG_TransportType = para[i].getParameterAsString();
+			else if (name.equals("LG_ShippingMode"))
+				p_LG_ShippingMode = para[i].getParameterAsString();
+
+			else if (name.equals("C_UOM_Volume_ID"))
+				p_C_UOM_Volume_ID = para[i].getParameterAsInt();
+			else if (name.equals("C_UOM_Weight_ID"))
+				p_C_UOM_Weight_ID = para[i].getParameterAsInt();
+			
+			
+			
+			else if (name.equals("M_Product_ID_0"))
+				p_M_Product_0_ID = para[i].getParameterAsInt();
+			else if (name.equals("M_Product_ID_1"))
+				p_M_Product_1_ID = para[i].getParameterAsInt();
+			else if (name.equals("M_Product_ID_2"))
+				p_M_Product_2_ID = para[i].getParameterAsInt();
+			else if (name.equals("M_Product_ID_3"))
+				p_M_Product_3_ID = para[i].getParameterAsInt();
+			else if (name.equals("M_Product_ID_4"))
+				p_M_Product_4_ID = para[i].getParameterAsInt();
+			else if (name.equals("M_Product_ID_5"))
+				p_M_Product_5_ID = para[i].getParameterAsInt();
+			
+			else if (name.equals("surcharge_0_ID"))
+				p_surcharge_0_ID = para[i].getParameterAsInt();
+			else if (name.equals("surcharge_1_ID"))
+				p_surcharge_1_ID = para[i].getParameterAsInt();
+			else if (name.equals("surcharge_2_ID"))
+				p_surcharge_2_ID = para[i].getParameterAsInt();
+			else if (name.equals("surcharge_3_ID"))
+				p_surcharge_3_ID = para[i].getParameterAsInt();
+			else if (name.equals("surcharge_4_ID"))
+				p_surcharge_4_ID = para[i].getParameterAsInt();
+			else if (name.equals("surcharge_5_ID"))
+				p_surcharge_5_ID = para[i].getParameterAsInt();
+			
+			
+			else
+				log.log(Level.SEVERE, "Unknown Parameter: " + name);
+		}
+	}	//	prepare
+
+
+	/**
+	 *  Perform process.
+	 *  @return Message
+	 *  @throws Exception
+	 */
+	protected String doIt() throws Exception
+	{
+		StringBuffer sql = null;
+		int no = 0;
+		
+
+		//	****	Prepare	****
+
+		//	Delete Old Imported
+		if (m_deleteOldImported)
+		{
+			sql = new StringBuffer ("DELETE I_ProductPriceRate "
+				+ "WHERE I_IsImported='Y'").append(clientCheck);
+			no = DB.executeUpdate(sql.toString(), get_TrxName());
+			log.info("Delete Old Impored =" + no);
+		}
+		setParameters();
+		
+
+
+
+		//	Product
+		sql = new StringBuffer ("UPDATE I_ProductPriceRate "
+			  + "SET M_Shipper_ID=(SELECT MAX(M_Shipper_ID) FROM M_Shipper p"
+			  + " WHERE I_ProductPriceList.Shipper_Name=p.Name AND I_ProductPriceList.AD_Client_ID=p.AD_Client_ID) "
+			  + "WHERE M_Shipper_ID IS NULL AND Shipper_Name IS NOT NULL"
+			  + " AND I_IsImported<>'Y'").append (getWhereClause());
+		no = DB.executeUpdate(sql.toString(), get_TrxName());
+		log.fine("Set Shipper from Value=" + no);
+		
+		sql = new StringBuffer ("UPDATE I_ProductPriceRate "
+				  + "SET LG_AirPort_Destiny_ID =(SELECT MAX(LG_AirPort_ID) FROM LG_AirPort p"
+				  + " WHERE I_ProductPriceList.IATACode_Destiny=p.IATACode) "
+				  + "WHERE LG_AirPort_Destiny_ID IS NULL AND IATACode_Destiny IS NOT NULL"
+				  + " AND I_IsImported<>'Y'").append (clientCheck);
+		no = DB.executeUpdate(sql.toString(), get_TrxName());
+		log.fine("Set Airport from IATACode" + no);
+			
+		sql = new StringBuffer ("UPDATE I_ProductPriceRate "
+					  + "SET LG_AirPort_Origin_ID =(SELECT MAX(LG_AirPort_ID) FROM LG_AirPort p"
+					  + " WHERE I_ProductPriceList.IATACode_Origin=p.IATACode) "
+					  + "WHERE LG_AirPort_Origin_ID IS NULL AND IATACode_Origin IS NOT NULL"
+					  + " AND I_IsImported<>'Y'").append (clientCheck);
+		no = DB.executeUpdate(sql.toString(), get_TrxName());
+		log.fine("Set Airport from IATACode" + no);
+				
+		sql = new StringBuffer ("UPDATE I_ProductPriceRate "
+						  + "SET LG_CityFrom_ID =(SELECT MAX(C_City_ID) FROM C_City p"
+						  + " WHERE I_ProductPriceList.CityFrom_Name=p.Name) "
+						  + "WHERE LG_CityFrom_ID IS NULL AND CityFrom_Name IS NOT NULL"
+						  + " AND I_IsImported<>'Y'").append (clientCheck);
+		no = DB.executeUpdate(sql.toString(), get_TrxName());
+		log.fine("Set CityFrom from name" + no);
+					
+		sql = new StringBuffer ("UPDATE I_ProductPriceRate "
+							  + "SET LG_CityTo_ID =(SELECT MAX(C_City_ID) FROM C_City p"
+							  + " WHERE I_ProductPriceList.CityTo_Name=p.Name) "
+							  + "WHERE LG_CityTo_ID IS NULL AND CityTo_Name IS NOT NULL"
+							  + " AND I_IsImported<>'Y'").append (clientCheck);
+		no = DB.executeUpdate(sql.toString(), get_TrxName());
+		log.fine("Set CityTo from name" + no);					
+
+						
+		sql = new StringBuffer ("UPDATE I_ProductPriceRate "
+								  + "SET LG_Route_ID =(SELECT MAX(LG_Route_ID) FROM LG_Route p"
+								  + " WHERE I_ProductPriceList.routename=p.Name) "
+								  + "WHERE LG_Route_ID IS NULL AND routename IS NOT NULL"
+								  + " AND I_IsImported<>'Y'").append (clientCheck);
+		no = DB.executeUpdate(sql.toString(), get_TrxName());
+		log.fine("Set Route from name" + no);
+							
+
+		sql = new StringBuffer ("UPDATE I_ProductPriceRate "
+									  + "SET LG_Commodity_ID =(SELECT MAX(LG_Commodity_ID) FROM LG_Commodity p"
+									  + " WHERE I_ProductPriceList.commodityValue=p.value) "
+									  + "WHERE LG_Commodity_ID IS NULL AND commodityValue IS NOT NULL"
+									  + " AND I_IsImported<>'Y'").append (clientCheck);
+		no = DB.executeUpdate(sql.toString(), get_TrxName());
+		log.fine("Set Commodity from value" + no);
+			
+		
+
+
+		commitEx();
+		if (p_validateValues)
+			return "";
+		//	-------------------------------------------------------------------
+		int noInsertpp = 0;
+		int noUpdatepp = 0;
+		int noInsertppvb = 0;
+		int noUpdateppvb = 0;
+		int noInsertpl = 0;
+		int noInsertplv = 0;
+
+		//	Go through Records
+		log.fine("start inserting/updating ...");
+		sql = new StringBuffer ("SELECT * FROM I_ProductPriceList WHERE I_IsImported='N'")
+			.append(clientCheck);
+		PreparedStatement pstmt_setImported = null;
+		PreparedStatement pstmt = null;
+		ResultSet rs = null;
+		try
+		{}
+		finally
+		{
+			DB.close(rs, pstmt);
+			rs = null;
+			pstmt = null;
+			DB.close(pstmt_setImported);
+			pstmt_setImported = null;
+		}
+
+		//	Set Error to indicator to not imported
+		sql = new StringBuffer ("UPDATE I_PriceList "
+			+ "SET I_IsImported='N', Updated=SysDate "
+			+ "WHERE I_IsImported<>'Y'").append(clientCheck);
+		no = DB.executeUpdate(sql.toString(), get_TrxName());
+		
+		return "";
+	}	//	doIt
+	
+	private void setParameters()
+	{
+		int no = 0;
+		
+		StringBuffer sql = new StringBuffer();
+		//	Set Client, Org, IsActive, Created/Updated, EnforcePriceLimit, IsSOPriceList, IsTaxIncluded, PricePrecision
+		sql = new StringBuffer ("UPDATE I_ProductPriceRate "
+			+ "SET AD_Client_ID = COALESCE (AD_Client_ID, ").append(m_AD_Client_ID).append("),"
+			+ " AD_Org_ID = COALESCE (AD_Org_ID, 0),"
+			+ " IsActive = COALESCE (IsActive, 'Y'),"
+			+ " Created = COALESCE (Created, SysDate),"
+			+ " CreatedBy = COALESCE (CreatedBy, 0),"
+			+ " Updated = COALESCE (Updated, SysDate),"
+			+ " UpdatedBy = COALESCE (UpdatedBy, 0),"
+			+ " I_ErrorMsg = ' ',"
+			+ " I_IsImported = 'N' "
+			+ "WHERE I_IsImported<>'Y' OR I_IsImported IS NULL");
+		no = DB.executeUpdate(sql.toString(), get_TrxName());
+		log.info("Reset=" + no);
+		ArrayList<Object> params = new ArrayList<Object>();
+		if (p_C_BPartner_ID != 0)
+		{
+			sql.delete(0, sql.length());
+			params.clear();
+			params.add(p_M_Product_0_ID);
+			sql.append("Update I_ProductPriceRate set C_BPartner_ID=? where i_Isimported = 'N'" + clientCheck);
+			no = DB.executeUpdateEx(sql.toString(), params.toArray(), get_TrxName());
+		}
+
+		if (p_M_Product_0_ID != 0)
+		{
+			sql.delete(0, sql.length());
+			params.clear();
+			params.add(p_M_Product_0_ID);
+			sql.append("Update I_ProductPriceRate set M_Product_0_ID=? where i_Isimported = 'N'" + clientCheck);
+			no = DB.executeUpdateEx(sql.toString(), params.toArray(), get_TrxName());
+		}
+		if (p_M_Product_1_ID != 0)
+		{
+			sql.delete(0, sql.length());
+			params.clear();
+			params.add(p_M_Product_1_ID);
+			sql.append("Update I_ProductPriceRate set M_Product_1_ID=? where i_Isimported = 'N'" + clientCheck);
+			no = DB.executeUpdateEx(sql.toString(), params.toArray(), get_TrxName());
+		}if (p_M_Product_2_ID != 0)
+		{
+			sql.delete(0, sql.length());
+			params.clear();
+			params.add(p_M_Product_2_ID);
+			sql.append("Update I_ProductPriceRate set M_Product_2_ID=? where i_Isimported = 'N'" + clientCheck);
+			no = DB.executeUpdateEx(sql.toString(), params.toArray(), get_TrxName());
+		}if (p_M_Product_3_ID != 0)
+		{
+			sql.delete(0, sql.length());
+			params.clear();
+			params.add(p_M_Product_3_ID);
+			sql.append("Update I_ProductPriceRate set M_Product_3_ID=? where i_Isimported = 'N'" + clientCheck);
+			no = DB.executeUpdateEx(sql.toString(), params.toArray(), get_TrxName());
+		}if (p_M_Product_4_ID != 0)
+		{
+			sql.delete(0, sql.length());
+			params.clear();
+			params.add(p_M_Product_4_ID);
+			sql.append("Update I_ProductPriceRate set M_Product_4_ID=? where i_Isimported = 'N'" + clientCheck);
+			no = DB.executeUpdateEx(sql.toString(), params.toArray(), get_TrxName());
+		}
+		if (p_M_Product_5_ID != 0)
+		{
+			sql.delete(0, sql.length());
+			params.clear();
+			params.add(p_M_Product_5_ID);
+			sql.append("Update I_ProductPriceRate set M_Product_5_ID=? where i_Isimported = 'N'" + clientCheck);
+			no = DB.executeUpdateEx(sql.toString(), params.toArray(), get_TrxName());
+		}		
+
+		if (p_surcharge_0_ID != 0)
+		{
+			sql.delete(0, sql.length());
+			params.clear();
+			params.add(p_surcharge_0_ID);
+			sql.append("Update I_ProductPriceRate set surcharge_0_ID=? where i_Isimported = 'N'" + clientCheck);
+			no = DB.executeUpdateEx(sql.toString(), params.toArray(), get_TrxName());
+		}
+		if (p_surcharge_0_ID != 0)
+		{
+			sql.delete(0, sql.length());
+			params.clear();
+			params.add(p_surcharge_0_ID);
+			sql.append("Update I_ProductPriceRate set surcharge_0_ID=? where i_Isimported = 'N'" + clientCheck);
+			no = DB.executeUpdateEx(sql.toString(), params.toArray(), get_TrxName());
+		}
+		if (p_surcharge_1_ID != 0)
+		{
+			sql.delete(0, sql.length());
+			params.clear();
+			params.add(p_surcharge_1_ID);
+			sql.append("Update I_ProductPriceRate set surcharge_1_ID=? where i_Isimported = 'N'" + clientCheck);
+			no = DB.executeUpdateEx(sql.toString(), params.toArray(), get_TrxName());
+		}
+		if (p_surcharge_2_ID != 0)
+		{
+			sql.delete(0, sql.length());
+			params.clear();
+			params.add(p_surcharge_2_ID);
+			sql.append("Update I_ProductPriceRate set surcharge_2_ID=? where i_Isimported = 'N'" + clientCheck);
+			no = DB.executeUpdateEx(sql.toString(), params.toArray(), get_TrxName());
+		}
+		if (p_surcharge_3_ID != 0)
+		{
+			sql.delete(0, sql.length());
+			params.clear();
+			params.add(p_surcharge_3_ID);
+			sql.append("Update I_ProductPriceRate set surcharge_3_ID=? where i_Isimported = 'N'" + clientCheck);
+			no = DB.executeUpdateEx(sql.toString(), params.toArray(), get_TrxName());
+		}
+		if (p_surcharge_4_ID != 0)
+		{
+			sql.delete(0, sql.length());
+			params.clear();
+			params.add(p_surcharge_4_ID);
+			sql.append("Update I_ProductPriceRate set surcharge_4_ID=? where i_Isimported = 'N'" + clientCheck);
+			no = DB.executeUpdateEx(sql.toString(), params.toArray(), get_TrxName());
+		}
+		if (p_surcharge_5_ID != 0)
+		{
+			sql.delete(0, sql.length());
+			params.clear();
+			params.add(p_surcharge_5_ID);
+			sql.append("Update I_ProductPriceRate set surcharge_5_ID=? where i_Isimported = 'N'" + clientCheck);
+			no = DB.executeUpdateEx(sql.toString(), params.toArray(), get_TrxName());
+		}
+		
+
+		if (p_LG_TransportType != "")
+		{
+			sql.delete(0, sql.length());
+			params.clear();
+			params.add(p_LG_TransportType);
+			sql.append("Update I_ProductPriceRate set LG_TransportType=? where i_Isimported = 'N'" + clientCheck);
+			no = DB.executeUpdateEx(sql.toString(), params.toArray(), get_TrxName());
+		}
+		if (p_LG_ShippingMode != "")
+		{
+			sql.delete(0, sql.length());
+			params.clear();
+			params.add(p_LG_ShippingMode);
+			sql.append("Update I_ProductPriceRate set LG_ShippingMode=? where i_Isimported = 'N'" + clientCheck);
+			no = DB.executeUpdateEx(sql.toString(), params.toArray(), get_TrxName());
+		}
+		if (p_C_UOM_Weight_ID != 0)
+		{
+			sql.delete(0, sql.length());
+			params.clear();
+			params.add(p_C_UOM_Weight_ID);
+			sql.append("Update I_ProductPriceRate set C_UOM_Weight_ID=? where i_Isimported = 'N'" + clientCheck);
+			no = DB.executeUpdateEx(sql.toString(), params.toArray(), get_TrxName());
+		}
+		if (p_C_UOM_Volume_ID != 0)
+		{
+			sql.delete(0, sql.length());
+			params.clear();
+			params.add(p_C_UOM_Volume_ID);
+			sql.append("Update I_ProductPriceRate set C_UOM_Volume_ID=? where i_Isimported = 'N'" + clientCheck);
+			no = DB.executeUpdateEx(sql.toString(), params.toArray(), get_TrxName());
+		}
+			
+	}
+
+	@Override
+	public String getWhereClause() {
+		return " AND AD_Client_ID=" + m_AD_Client_ID;
+	}
+
+	@Override
+	public String getImportTableName() {
+		return X_I_ProductPriceRate.Table_Name;
+	}
+
+}	//	ImportProduct
