@@ -32,10 +32,11 @@ import org.shw.model.MLGRoute;
  *  @author ADempiere (generated) 
  *  @version Release 3.9.0
  */
-public class Import_ProductPriceRate extends Import_ProductPriceRateAbstract
+public class Import_ProductPriceRateFromSB extends Import_ProductPriceRateFromSBAbstract
 {
 	private 	String 				clientCheck = " AND AD_Client_ID in (0, " ;
-	private String 				whereClauseRecordsToImport ="";
+	private 	String 				whereClauseRecordsToImport ="";
+	private 	String 				FromID =  " and i_ProductPricerate_ID in (";
 	private int 						noFieldsBreakValue = 0;
 	private  int 					noFieldsProduct = 0;
 	private  int 					noFieldsSurCharge = 0;
@@ -58,7 +59,12 @@ public class Import_ProductPriceRate extends Import_ProductPriceRateAbstract
 		clientCheck = clientCheck + Env.getAD_Client_ID(getCtx()) + ")";
 		int i = 100;
 		
-
+		
+		for (int I_ProductPriceRate_ID: getSelectionKeys())
+		{
+			FromID = FromID + I_ProductPriceRate_ID + ",";
+		}
+		FromID = FromID.substring(0, FromID.length() -1) + ")";
 		String sqlNoBreakFields = "select count(*) from ad_column where ad_table_ID = ? and lower(columnname) like 'breakvalue_%'";
 		String sqlNoProductFields = "select count(*) from ad_column where ad_table_ID = ? and lower(columnname) like 'm_product_%'";
 		String sqlNoProductSurCharge = "select count(*) from ad_column where ad_table_ID = ? and lower(columnname) like 'surcharge_%'";
@@ -66,6 +72,7 @@ public class Import_ProductPriceRate extends Import_ProductPriceRateAbstract
 		noFieldsProduct = DB.getSQLValueEx(get_TrxName(), sqlNoProductFields, X_I_ProductPriceRate.Table_ID);
 		noFieldsSurCharge = DB.getSQLValueEx(get_TrxName(), sqlNoProductSurCharge, X_I_ProductPriceRate.Table_ID);
 		whereClauseRecordsToImport = " AND I_IsImported<>'Y' OR I_IsImported IS NULL AND (I_ErrorMsg  IS NULL or  trim(i_errormsg) = '') and processed = 'N'";
+		whereClauseRecordsToImport = whereClauseRecordsToImport + FromID;
 		StringBuffer sql = null;
 		int no = 0;
 		m_AD_Client_ID = Env.getAD_Client_ID(getCtx());
@@ -85,7 +92,8 @@ public class Import_ProductPriceRate extends Import_ProductPriceRateAbstract
 	{
 		final StringBuffer whereClause = new StringBuffer(
 				X_I_ProductPriceRate.COLUMNNAME_I_IsImported).append("='N' AND ")
-				.append("( I_ErrorMsg  IS NULL or  trim(i_errormsg) = '') ");
+				.append("( I_ErrorMsg  IS NULL or  trim(i_errormsg) = '') ")
+				.append(FromID);
 		if (isisOnlyRecordID())
 		{
 			whereClause.append(" AND  I_ProductPriceRate_ID = " + getRecord_ID());
@@ -234,6 +242,7 @@ public class Import_ProductPriceRate extends Import_ProductPriceRateAbstract
 			  + "SET M_Shipper_ID=(SELECT MAX(M_Shipper_ID) FROM M_Shipper p"
 			  + " WHERE I_ProductPriceRate.Shipper_Name=p.Name AND I_ProductPriceRate.AD_Client_ID=p.AD_Client_ID) "
 			  + "WHERE M_Shipper_ID IS NULL AND Shipper_Name IS NOT NULL"
+			  + FromID
 			  + " AND I_IsImported<>'Y'").append (getWhereClause());
 		no = DB.executeUpdate(sql.toString(), get_TrxName());
 		log.fine("Set Shipper from Value=" + no);
@@ -242,6 +251,7 @@ public class Import_ProductPriceRate extends Import_ProductPriceRateAbstract
 				  + "SET LG_AirPort_Destiny_ID =(SELECT MAX(LG_AirPort_ID) FROM LG_AirPort p"
 				  + " WHERE trim(lower(I_ProductPriceRate.IATACode_Destiny))=trim(lower(p.IATACode))) "
 				  + "WHERE LG_AirPort_Destiny_ID IS NULL AND IATACode_Destiny IS NOT NULL"
+				  + FromID
 				  + " AND I_IsImported<>'Y'").append (getWhereClause());
 		no = DB.executeUpdate(sql.toString(), get_TrxName());
 		log.fine("Set Airport from IATACode" + no);
@@ -250,6 +260,7 @@ public class Import_ProductPriceRate extends Import_ProductPriceRateAbstract
 					  + "SET LG_AirPort_Origin_ID =(SELECT MAX(LG_AirPort_ID) FROM LG_AirPort p"
 					  + " WHERE trim(lower(I_ProductPriceRate.IATACode_Origin))=trim(lower(p.IATACode))) "
 					  + "WHERE LG_AirPort_Origin_ID IS NULL AND IATACode_Origin IS NOT NULL"
+					  + FromID
 					  + " AND I_IsImported<>'Y'").append (getWhereClause());
 		no = DB.executeUpdate(sql.toString(), get_TrxName());
 		log.fine("Set Airport from IATACode" + no);
@@ -258,6 +269,7 @@ public class Import_ProductPriceRate extends Import_ProductPriceRateAbstract
 						  + "SET LG_CityFrom_ID =(SELECT MAX(C_City_ID) FROM C_City p"
 						  + " WHERE trim(lower(I_ProductPriceRate.CityFrom_Name))=trim(lower(p.Name))) "
 						  + "WHERE LG_CityFrom_ID IS NULL AND CityFrom_Name IS NOT NULL"
+						  + FromID
 						  + " AND I_IsImported<>'Y'").append (getWhereClause());
 		no = DB.executeUpdate(sql.toString(), get_TrxName());
 		log.fine("Set CityFrom from name" + no);
@@ -266,6 +278,7 @@ public class Import_ProductPriceRate extends Import_ProductPriceRateAbstract
 							  + "SET LG_CityTo_ID =(SELECT MAX(C_City_ID) FROM C_City p"
 							  + " WHERE trim(lower(I_ProductPriceRate.CityTo_Name))=trim(lower(p.Name))) "
 							  + "WHERE LG_CityTo_ID IS NULL AND CityTo_Name IS NOT NULL"
+							  + FromID
 							  + " AND I_IsImported<>'Y'").append (getWhereClause());
 		no = DB.executeUpdate(sql.toString(), get_TrxName());
 		log.fine("Set CityTo from name" + no);					
@@ -275,6 +288,7 @@ public class Import_ProductPriceRate extends Import_ProductPriceRateAbstract
 								  + "SET LG_Route_ID =(SELECT MAX(LG_Route_ID) FROM LG_Route p"
 								  + " WHERE trim(lower(I_ProductPriceRate.routename))=trim(lower(p.Name))) "
 								  + "WHERE LG_Route_ID IS NULL AND routename IS NOT NULL"
+								  + FromID
 								  + " AND I_IsImported<>'Y'").append (getWhereClause());
 		no = DB.executeUpdate(sql.toString(), get_TrxName());
 		log.fine("Set Route from name" + no);
@@ -284,6 +298,7 @@ public class Import_ProductPriceRate extends Import_ProductPriceRateAbstract
 									  + "SET LG_Commodity_ID =(SELECT MAX(LG_Commodity_ID) FROM LG_Commodity p"
 									  + " WHERE trim(lower(I_ProductPriceRate.commodityValue))=trim(lower(p.value))) "
 									  + "WHERE LG_Commodity_ID IS NULL AND commodityValue IS NOT NULL" 
+									  + FromID
 									  + " AND I_IsImported<>'Y'").append (getWhereClause());
 		no = DB.executeUpdate(sql.toString(), get_TrxName());
 		log.fine("Set Commodity from value" + no);		

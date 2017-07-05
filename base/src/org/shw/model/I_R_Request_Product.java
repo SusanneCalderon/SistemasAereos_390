@@ -13,7 +13,7 @@
  * For the text or an alternative of this public license, you may reach us    *
  * or via info@adempiere.net or http://www.adempiere.net/license.html         *
  *****************************************************************************/
-package org.adempiere.model;
+package org.shw.model;
 
 import java.math.BigDecimal;
 import java.sql.Timestamp;

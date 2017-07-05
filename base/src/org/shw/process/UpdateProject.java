@@ -14,20 +14,21 @@
  * or via info@adempiere.net or http://www.adempiere.net/license.html         *
  *****************************************************************************/
 
-package org.adempiere.process;
+package org.shw.process;
 
-import java.math.BigDecimal;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.logging.Level;
 
-import org.shw.model.X_R_Request_Product;
-import org.compiere.model.MRequest;
-import org.eevolution.model.MPPProductBOM;
-import org.eevolution.model.MPPProductBOMLine;
+import org.compiere.model.MProject;
+import org.compiere.model.Query;
+import org.compiere.util.Trx;
 
-/** Generated Process for (CreateRequestProduct)
+/** Generated Process for (updateProjects)
  *  @author ADempiere (generated) 
  *  @version Release 3.9.0
  */
-public class CreateRequestProduct extends CreateRequestProductAbstract
+public class UpdateProject extends UpdateProjectAbstract
 {
 	@Override
 	protected void prepare()
@@ -38,20 +39,45 @@ public class CreateRequestProduct extends CreateRequestProductAbstract
 	@Override
 	protected String doIt() throws Exception
 	{
-
-		//MRequest request = new MRequest(getCtx(), getRecord_ID(), get_TrxName());
-		for (int M_Product_ID: getSelectionKeys())
+		ArrayList<Object> params = new ArrayList<>();
+		String whereClause = "IsSummary=?  ";
+		params.add(isSummaryLevel());
+		if (getProjectId()!=0)
 		{
-			X_R_Request_Product requestProduct = new X_R_Request_Product(getCtx(), 0, get_TrxName());
-			requestProduct.setR_Request_ID(getRecord_ID());
-			requestProduct.setM_Product_ID(M_Product_ID);
-			requestProduct.setValidFrom(getValidfrom());
-			requestProduct.setIsMandatory(isMandatory());
-			int C_BPartner_ID = getSelectionAsInt(M_Product_ID, "PPO_C_BPartner_ID");
-			BigDecimal QtyOrdered = getSelectionAsBigDecimal(M_Product_ID, "P_QtyOrdered");
-			requestProduct.set_ValueOfColumn("QtyOrdered",QtyOrdered);
-			requestProduct.saveEx();
+			whereClause = whereClause + " and c_Project_ID = ?";
+			params.add(getProjectId());
+		}
+		if (getContractDate()!= null)
+		{
+			whereClause = whereClause + " and datecontract between ? and ?";
+			params.add(getContractDate());
+			params.add(getContractDateTo());
+		}
+
+
+		int[] IDs = new Query(getCtx(), MProject.Table_Name, whereClause, get_TrxName())
+				.setParameters(params)
+				.setClient_ID()
+				.setOrderBy("Value")
+				.getIDs();
+
+        Trx dbTransaction = null;		
+		for (int c_Project_ID:IDs)
+		{
+			Integer projectID = (Integer)c_Project_ID;			
+            dbTransaction = Trx.get(projectID.toString(), true);
+            MProject project = new MProject(getCtx(), c_Project_ID, dbTransaction.getTrxName());
+			project.updateProject();
+		
+            if (dbTransaction != null) {
+                dbTransaction.commit(true);
+                dbTransaction.close();
+
+				log.log(Level.INFO, project.getValue() + " " + project.getName());
+            }
 		}
 		return "";
+
+
 	}
 }

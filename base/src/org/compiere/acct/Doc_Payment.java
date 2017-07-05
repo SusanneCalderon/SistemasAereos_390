@@ -122,6 +122,12 @@ public class Doc_Payment extends Doc
 		if (getDocumentType().equals(DOCTYPE_ARReceipt))
 		{
 			//	Asset
+
+			if ("X".equals(m_TenderType) && !MSysConfig.getBooleanValue("CASH_AS_PAYMENT", true, getAD_Client_ID()))
+			{
+				int defaultbankaccount = getdefaultBank_Account_ID();
+				setC_BankAccount_ID(defaultbankaccount);
+			}
 			MAccount InTransit =  getAccount(Doc.ACCTTYPE_BankInTransit, as);
 			if ("X".equals(m_TenderType) && !MSysConfig.getBooleanValue("CASH_AS_PAYMENT", true, getAD_Client_ID()))
 				InTransit = getAccount(Doc.ACCTTYPE_CashReceipt, as);

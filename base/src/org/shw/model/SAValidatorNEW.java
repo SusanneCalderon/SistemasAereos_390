@@ -85,6 +85,7 @@ import org.compiere.model.ProductCost;
 import org.compiere.model.Query;
 import org.compiere.model.X_C_Order;
 import org.compiere.model.X_LG_ProductPriceRate;
+import org.compiere.print.MPrintFormatItem;
 import org.compiere.process.ProcessInfo;
 import org.compiere.util.CLogger;
 import org.compiere.util.DB;
@@ -99,6 +100,7 @@ import org.eevolution.model.MHRProcess;
 import org.eevolution.model.MPPOrder;
 import org.eevolution.model.MWMInOutBound;
 import org.eevolution.model.MWMInOutBoundLine;
+import org.python.antlr.ast.GeneratorExp.generators_descriptor;
 
 
 
@@ -1901,6 +1903,20 @@ private String RequestSavaParent(PO A_PO)
 		request.set_ValueOfColumn("C_BPartner_ID", parent.get_Value("C_BPartner_ID"));
 		request.setR_RequestType_ID(parent.getR_RequestType_ID());
 	}*/
+	return "";
+}
+
+
+private String test (PO A_PO)
+{
+	String A_TrxName = A_PO.get_TrxName();
+	MPrintFormatItem pfi = (MPrintFormatItem)A_PO;
+
+	String sql = "update ad_printformatitem_trl set printname = ? where ad_printformatitem_ID = ?";
+	ArrayList<Object> params = new ArrayList<>();
+	params.add(pfi.getPrintName());
+	params.add(pfi.getAD_PrintFormatItem_ID());
+	DB.executeUpdateEx(sql, params.toArray(), A_TrxName);
 	return "";
 }
 	

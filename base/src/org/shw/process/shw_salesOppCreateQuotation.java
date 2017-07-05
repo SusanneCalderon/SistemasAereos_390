@@ -14,20 +14,13 @@
  * or via info@adempiere.net or http://www.adempiere.net/license.html         *
  *****************************************************************************/
 
-package org.adempiere.process;
+package org.shw.process;
 
-import java.math.BigDecimal;
-
-import org.shw.model.X_R_Request_Product;
-import org.compiere.model.MRequest;
-import org.eevolution.model.MPPProductBOM;
-import org.eevolution.model.MPPProductBOMLine;
-
-/** Generated Process for (CreateRequestProduct)
+/** Generated Process for (shw_salesOppCreateQuotation)
  *  @author ADempiere (generated) 
  *  @version Release 3.9.0
  */
-public class CreateRequestProduct extends CreateRequestProductAbstract
+public class shw_salesOppCreateQuotation extends shw_salesOppCreateQuotationAbstract
 {
 	@Override
 	protected void prepare()
@@ -38,20 +31,6 @@ public class CreateRequestProduct extends CreateRequestProductAbstract
 	@Override
 	protected String doIt() throws Exception
 	{
-
-		//MRequest request = new MRequest(getCtx(), getRecord_ID(), get_TrxName());
-		for (int M_Product_ID: getSelectionKeys())
-		{
-			X_R_Request_Product requestProduct = new X_R_Request_Product(getCtx(), 0, get_TrxName());
-			requestProduct.setR_Request_ID(getRecord_ID());
-			requestProduct.setM_Product_ID(M_Product_ID);
-			requestProduct.setValidFrom(getValidfrom());
-			requestProduct.setIsMandatory(isMandatory());
-			int C_BPartner_ID = getSelectionAsInt(M_Product_ID, "PPO_C_BPartner_ID");
-			BigDecimal QtyOrdered = getSelectionAsBigDecimal(M_Product_ID, "P_QtyOrdered");
-			requestProduct.set_ValueOfColumn("QtyOrdered",QtyOrdered);
-			requestProduct.saveEx();
-		}
 		return "";
 	}
 }

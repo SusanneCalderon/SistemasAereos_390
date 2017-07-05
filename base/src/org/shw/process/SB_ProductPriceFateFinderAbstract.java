@@ -14,44 +14,42 @@
  * or via info@adempiere.net or http://www.adempiere.net/license.html         *
  *****************************************************************************/
 
-package org.adempiere.process;
+package org.shw.process;
 
-import java.math.BigDecimal;
-
-import org.shw.model.X_R_Request_Product;
-import org.compiere.model.MRequest;
-import org.eevolution.model.MPPProductBOM;
-import org.eevolution.model.MPPProductBOMLine;
-
-/** Generated Process for (CreateRequestProduct)
+import org.compiere.process.SvrProcess;
+/** Generated Process for (SB_ProductPriceFateFinder)
  *  @author ADempiere (generated) 
  *  @version Release 3.9.0
  */
-public class CreateRequestProduct extends CreateRequestProductAbstract
+public abstract class SB_ProductPriceFateFinderAbstract extends SvrProcess
 {
+	/** Process Value 	*/
+	private static final String VALUE = "SB_ProductPriceFateFinder";
+	/** Process Name 	*/
+	private static final String NAME = "SB_ProductPriceFateFinder";
+	/** Process Id 	*/
+	private static final int ID = 3000355;
+ 
+
+ 
+
 	@Override
 	protected void prepare()
 	{
-		super.prepare();
 	}
 
-	@Override
-	protected String doIt() throws Exception
-	{
+	/**	 Getter Parameter Value for Process ID	*/
+	public static final int getProcessId() {
+		return ID;
+	}
 
-		//MRequest request = new MRequest(getCtx(), getRecord_ID(), get_TrxName());
-		for (int M_Product_ID: getSelectionKeys())
-		{
-			X_R_Request_Product requestProduct = new X_R_Request_Product(getCtx(), 0, get_TrxName());
-			requestProduct.setR_Request_ID(getRecord_ID());
-			requestProduct.setM_Product_ID(M_Product_ID);
-			requestProduct.setValidFrom(getValidfrom());
-			requestProduct.setIsMandatory(isMandatory());
-			int C_BPartner_ID = getSelectionAsInt(M_Product_ID, "PPO_C_BPartner_ID");
-			BigDecimal QtyOrdered = getSelectionAsBigDecimal(M_Product_ID, "P_QtyOrdered");
-			requestProduct.set_ValueOfColumn("QtyOrdered",QtyOrdered);
-			requestProduct.saveEx();
-		}
-		return "";
+	/**	 Getter Parameter Value for Process Value	*/
+	public static final String getProcessValue() {
+		return VALUE;
+	}
+
+	/**	 Getter Parameter Value for Process Name	*/
+	public static final String getProcessName() {
+		return NAME;
 	}
 }

@@ -43,7 +43,7 @@ public class Template  extends SvrProcess
 {	
 
 			
-	Timestamp P_DateAcct = null;
+	Boolean P_IsSummary= false;
 	int P_C_Charge_ID = 0;
     @Override    
     protected void prepare()
@@ -53,8 +53,8 @@ public class Template  extends SvrProcess
 				String name = para.getParameterName();
 				if (para.getParameter() == null)
 					;
-				else if (name.equals(MInvoice.COLUMNNAME_DateAcct))
-					P_DateAcct = para.getParameterAsTimestamp();
+				//else if (name.equals(MInvoice.COLUMNNAME_DateAcct))
+			//	P_DateAcct = para.getParameterAsTimestamp();
 				else if (name.equals(MInvoice.COLUMNNAME_C_Charge_ID))
 						P_C_Charge_ID = para.getParameterAsInt();
 					
@@ -106,13 +106,6 @@ public class Template  extends SvrProcess
     	    		//	Allocation
     	    		if (allocation == null)
     	    		{
-    	    			allocation = new MAllocationHdr (A_Ctx, true, 
-    	    				P_DateAcct	, invoice.getC_Currency_ID(), "WriteOff", A_TrxName);
-    	    			allocation.setAD_Org_ID(invoice.getAD_Org_ID());
-    	    			if (!allocation.save())
-    	    			{
-    	    				return "Cannot Create allocation";
-    	    			}
     	    		}
     	    		//	Payment
     	    		    	    		//	Line
@@ -129,68 +122,6 @@ public class Template  extends SvrProcess
     	        return "";
 	}
     
-    protected String doItPayment() throws Exception
-    {
-    	//import java.util.List;
-    	//import org.compiere.model.MOrderLine;
-    	//import org.compiere.model.MOrder;
-    	//import org.compiere.model.Query;
-    	//import org.compiere.util.Env;
-
-    			String A_TrxName = get_TrxName();
-    			Properties A_Ctx = getCtx();
-    			int A_Record_ID = getRecord_ID();
-    			int A_AD_PInstance_ID = getAD_PInstance_ID();
-    	        List<MPayment> m_records = null;
-    	        String whereClause = "EXISTS (SELECT T_Selection_ID FROM T_Selection WHERE  T_Selection.AD_PInstance_ID=? " +
-    	                " AND T_Selection.T_Selection_ID=c_Payment.C_Payment_ID)";
-    	        m_records = new Query(A_Ctx, MPayment.Table_Name, whereClause, A_TrxName)
-    	                                            .setParameters(A_AD_PInstance_ID)
-    	                                            .setClient_ID()
-    	                                            .list();
-    	       /* if (A_Record_ID > 0) 
-    	        {
-    	            MOrderLine line = new MOrderLine(A_Ctx, A_Record_ID, A_TrxName);
-    	            m_records.add(line);
-    	        }*/
-    	        MAllocationHdr allocation = null;
-    	        for (MPayment payment:m_records)
-    	        {
-    	    		//	Nothing to do
-    	        	BigDecimal openAmt = payment.getPayAmt().subtract(payment.getAllocatedAmt());
-    	    		if (openAmt == null || openAmt.signum() == 0)
-    	    			continue;
-    	    		//
-    	    		
-    	    		//	Invoice
-    	    		if (!payment.isReceipt())
-    	    			openAmt = openAmt.negate();
-    	    		
-    	    		//	Allocation
-    	    		if (allocation == null)
-    	    		{
-    	    			allocation = new MAllocationHdr (A_Ctx, true, 
-    	    				P_DateAcct	, payment.getC_Currency_ID(), "WriteOff", A_TrxName);
-    	    			allocation.setAD_Org_ID(payment.getAD_Org_ID());
-    	    			if (!allocation.save())
-    	    			{
-    	    				return "Cannot Create allocation";
-    	    			}
-    	    		}
-    	    		//	Payment
-    	    		    	    		//	Line
-    	    		MAllocationLine allocationLine = null;
-    	    		allocationLine = new MAllocationLine (allocation, Env.ZERO,
-    	    				Env.ZERO, openAmt, Env.ZERO);
-    	    		allocationLine.setC_Payment_ID(payment.getC_Payment_ID());
-    	    		allocationLine.setC_Charge_ID(P_C_Charge_ID);
-    	    		allocationLine.saveEx();
-    	    		if (allocation.processIt(MInvoice.DOCACTION_Complete))
-    	    			allocation.saveEx();
-    	    		
-    	    	}
-    	        return "";
-	}
     
 
 }

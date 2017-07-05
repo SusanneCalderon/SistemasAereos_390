@@ -22,7 +22,7 @@ import org.compiere.process.SvrProcess;
  *  @author ADempiere (generated) 
  *  @version Release 3.9.0
  */
-public abstract class Import_ProductPriceRateAbstract extends SvrProcess
+public abstract class Import_ProductPriceRateFromSBAbstract extends SvrProcess
 {
 	/** Process Value 	*/
 	private static final String VALUE = "Import_ProductPriceRate";

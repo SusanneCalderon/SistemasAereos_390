@@ -318,7 +318,7 @@ public class CalloutInvoice extends CalloutEngine
 		boolean IsSOTrx = Env.getContext(ctx, WindowNo, "IsSOTrx").equals("Y");
 		int C_BPartner_ID = Env.getContextAsInt(ctx, WindowNo, WindowNo, "C_BPartner_ID");
 		BigDecimal Qty = (BigDecimal)mTab.getValue("QtyInvoiced");
-		MProductPricing pp = new MProductPricing (M_Product_ID.intValue(), C_BPartner_ID, Qty, IsSOTrx);
+		MProductPricing pp = new MProductPricing (M_Product_ID.intValue(), C_BPartner_ID, Qty, IsSOTrx, null);
 		//
 		int M_PriceList_ID = Env.getContextAsInt(ctx, WindowNo, "M_PriceList_ID");
 		pp.setM_PriceList_ID(M_PriceList_ID);
@@ -551,7 +551,7 @@ public class CalloutInvoice extends CalloutEngine
 			if (QtyInvoiced == null)
 				QtyInvoiced = QtyEntered;
 			boolean IsSOTrx = Env.getContext(ctx, WindowNo, "IsSOTrx").equals("Y");
-			MProductPricing pp = new MProductPricing (M_Product_ID, C_BPartner_ID, QtyInvoiced, IsSOTrx);
+			MProductPricing pp = new MProductPricing (M_Product_ID, C_BPartner_ID, QtyInvoiced, IsSOTrx, null);
 			pp.setM_PriceList_ID(M_PriceList_ID);
 			int	M_PriceList_Version_ID = Env.getContextAsInt(ctx, WindowNo, "M_PriceList_Version_ID");
 			pp.setM_PriceList_Version_ID(M_PriceList_Version_ID);
@@ -876,7 +876,7 @@ public class CalloutInvoice extends CalloutEngine
 		return amt(ctx, WindowNo, mTab, mField, value);
 	}
 	
-	public String QuedanPT (Properties ctx, int WindowNo, GridTab mTab, GridField mField, Object value)
+	/*public String QuedanPT (Properties ctx, int WindowNo, GridTab mTab, GridField mField, Object value)
 	{	
 		Object A_Value = value;
 		Properties A_Ctx = ctx;
@@ -952,7 +952,7 @@ public class CalloutInvoice extends CalloutEngine
 		if (duedate != null)
 			A_Tab.setValue("DateConfirm", duedate);
 			return "";		
-	}
+	}*/
 	
 	
 	

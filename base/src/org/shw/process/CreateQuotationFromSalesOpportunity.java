@@ -18,44 +18,27 @@
 package org.shw.process;
 
 import java.math.BigDecimal;
-import java.sql.Timestamp;
 import java.util.ArrayList;
-import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Properties;
 import java.util.logging.Level;
 
-import org.adempiere.exceptions.ProductNotOnPriceListException;
-import org.adempiere.webui.apps.AEnv;
-import org.compiere.apps.AWindow;
-import org.compiere.model.MAllocationHdr;
-import org.compiere.model.MAllocationLine;
 import org.compiere.model.MBPartner;
-import org.compiere.model.MDocType;
-import org.compiere.model.MInvoice;
+import org.compiere.model.MDiscountSchemaLine;
 import org.compiere.model.MOpportunity;
 import org.compiere.model.MOrder;
 import org.compiere.model.MOrderLine;
-import org.compiere.model.MPayment;
-import org.compiere.model.MPriceList;
-import org.compiere.model.MPriceListVersion;
 import org.compiere.model.MProduct;
 import org.compiere.model.MProductPricing;
-import org.compiere.model.MQuery;
 import org.compiere.model.MRequest;
 import org.compiere.model.MUOMConversion;
-import org.compiere.model.MUser;
-import org.compiere.model.PP_Authorize;
 import org.compiere.model.Query;
-import org.compiere.model.X_M_ProductPrice;
 import org.compiere.process.ProcessInfoParameter;
 import org.compiere.process.SvrProcess;
-import org.compiere.util.DB;
 import org.compiere.util.Env;
 import org.shw.model.MLGProductPriceRate;
 import org.shw.model.MLGProductPriceRateLine;
-import org.shw.model.MLGRoute;
 import org.shw.model.X_LG_Request_ProductPriceRate;
+import org.shw.model.X_R_Request_Product;
 
 /**
  *  Creates Payment from c_invoice, including Aging
@@ -114,14 +97,15 @@ public class CreateQuotationFromSalesOpportunity  extends SvrProcess
     	quotation.setC_BPartner_Location_ID(bpartner.getPrimaryC_BPartner_Location_ID());
     	//
     	quotation.setM_Warehouse_ID(1000019);
-    	quotation.setM_PriceList_ID(1000133);
+    	quotation.setM_PriceList_ID(bpartner.getM_PriceList_ID());
     	quotation.setC_PaymentTerm_ID(bpartner.getC_PaymentTerm_ID());
     	quotation.setUser1_ID(P_User1_ID);
-    	quotation.setC_Activity_ID(opp.get_ValueAsInt(MOrder.COLUMNNAME_C_Activity_ID));
+    	quotation.setC_Activity_ID(bpartner.get_ValueAsInt(MOrder.COLUMNNAME_C_Activity_ID));
     	quotation.setDescription(opp.getDescription());
     	quotation.setC_Opportunity_ID(opp.getC_Opportunity_ID());
     	quotation.saveEx();
     	createLinesFromPriceRate(quotation);
+    	createLinesFromRequestProducts(quotation);
     	opp.setOpportunityAmt(quotation.getGrandTotal());
     	opp.saveEx();
 
@@ -151,7 +135,7 @@ public class CreateQuotationFromSalesOpportunity  extends SvrProcess
     			oLine.setQty(Env.ONE);
     		else
     		{
-    			qty = (BigDecimal)req.get_Value("CumulatedQty");
+    			qty = (BigDecimal)req.get_Value("Volume");
     			 vol = MUOMConversion.convert(oLine.getC_UOM_ID(), ppr.getC_UOM_Volume_ID(), qty, true);
      			oLine.setQty(vol);
     		}
@@ -175,8 +159,28 @@ public class CreateQuotationFromSalesOpportunity  extends SvrProcess
     			.setParameters(ppr.getLG_ProductPriceRate_ID())
     			.setOrderBy("BreakValueVolume Asc")
     			.list();
+    	whereClause = "(C_Bpartner_ID = ? OR C_BPartner_ID is null) and (M_Product_ID =? OR M_Product_ID is null)";
+    	ArrayList<Object> params = new ArrayList<>();
+    	params.add(ppr.getM_Product_ID());
+    	params.add(oLine.getC_Order().getC_BPartner_ID());
+    	MDiscountSchemaLine dsl = new Query(getCtx(), MDiscountSchemaLine.Table_Name, whereClause, get_TrxName())
+    			.setParameters(params)
+    			.setOrderBy("C_Bpartner_ID, M_Product_ID")
+    			.first();
+    	BigDecimal marge = new BigDecimal(20);
+    	if (dsl != null)
+    		marge = dsl.getLimit_Discount();
+    	
     	if (lines.isEmpty())
-    		return ppr.getPriceStd();
+    	{
+    		BigDecimal salesprice = ppr.getPriceLimit();
+    		if (marge.compareTo(Env.ZERO) !=0)
+    		{
+    			marge = marge.divide(Env.ONEHUNDRED).add(Env.ONE);
+    			salesprice = salesprice.multiply(marge);
+    		}    		
+    		return salesprice;
+    	}
     	for (MLGProductPriceRateLine line:lines)
     	{
     		if (qty.compareTo(line.getBreakValueVolume())<=0)
@@ -316,6 +320,26 @@ public class CreateQuotationFromSalesOpportunity  extends SvrProcess
 		getProductPricing (M_PriceList_ID,oLine);
 		
 	}	//	setPrice
+	  private Boolean createLinesFromRequestProducts(MOrder quotation)
+	    {
+	    	String whereClause = " R_Request_Product.r_request_ID in (select r_request_ID from r_request where c_opportunity_ID = ?)";
+	    	List<X_R_Request_Product> reqs = new Query(getCtx(), X_R_Request_Product.Table_Name, whereClause, get_TrxName())
+	    			.setParameters(opp.getC_Opportunity_ID())
+	    			.list();
+	    	for (X_R_Request_Product reqproduct:reqs)
+	    	{
+	    		MOrderLine oLine = new MOrderLine(quotation);
+	    		oLine.setM_Product_ID(reqproduct.getM_Product_ID());
+	    		oLine.setC_UOM_ID(reqproduct.getM_Product().getC_UOM_ID());
+	    		oLine.setQty((BigDecimal)reqproduct.get_Value("QtyOrdered"));
+	    		oLine.setPrice();
+	    		//setPrice(quotation.getM_PriceList_ID(), oLine);
+	    		oLine.saveEx();
+	    	}
+	    	return true;
+	    }
+	    	
+	    		
 
 
 }

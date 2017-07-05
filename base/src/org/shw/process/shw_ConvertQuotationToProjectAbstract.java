@@ -14,44 +14,52 @@
  * or via info@adempiere.net or http://www.adempiere.net/license.html         *
  *****************************************************************************/
 
-package org.adempiere.process;
+package org.shw.process;
 
-import java.math.BigDecimal;
-
-import org.shw.model.X_R_Request_Product;
-import org.compiere.model.MRequest;
-import org.eevolution.model.MPPProductBOM;
-import org.eevolution.model.MPPProductBOMLine;
-
-/** Generated Process for (CreateRequestProduct)
+import org.compiere.process.SvrProcess;
+/** Generated Process for (shw_ConvertQuotationToProject)
  *  @author ADempiere (generated) 
  *  @version Release 3.9.0
  */
-public class CreateRequestProduct extends CreateRequestProductAbstract
+public abstract class shw_ConvertQuotationToProjectAbstract extends SvrProcess
 {
+	/** Process Value 	*/
+	private static final String VALUE = "shw_ConvertQuotationToProject";
+	/** Process Name 	*/
+	private static final String NAME = "shw_ConvertQuotationToProject";
+	/** Process Id 	*/
+	private static final int ID = 3000358;
+ 
+	/**	Parameter Name for C_DocType_ID	*/
+	public static final String C_DocType_ID = "C_DocType_ID";
+
+	/**	Parameter Value for documentTypeId	*/
+	private int documentTypeId;
+ 
+
 	@Override
 	protected void prepare()
 	{
-		super.prepare();
+		documentTypeId = getParameterAsInt(C_DocType_ID);
 	}
 
-	@Override
-	protected String doIt() throws Exception
-	{
+	/**	 Getter Parameter Value for documentTypeId	*/
+	protected int getDocumentTypeId() {
+		return documentTypeId;
+	}
 
-		//MRequest request = new MRequest(getCtx(), getRecord_ID(), get_TrxName());
-		for (int M_Product_ID: getSelectionKeys())
-		{
-			X_R_Request_Product requestProduct = new X_R_Request_Product(getCtx(), 0, get_TrxName());
-			requestProduct.setR_Request_ID(getRecord_ID());
-			requestProduct.setM_Product_ID(M_Product_ID);
-			requestProduct.setValidFrom(getValidfrom());
-			requestProduct.setIsMandatory(isMandatory());
-			int C_BPartner_ID = getSelectionAsInt(M_Product_ID, "PPO_C_BPartner_ID");
-			BigDecimal QtyOrdered = getSelectionAsBigDecimal(M_Product_ID, "P_QtyOrdered");
-			requestProduct.set_ValueOfColumn("QtyOrdered",QtyOrdered);
-			requestProduct.saveEx();
-		}
-		return "";
+	/**	 Getter Parameter Value for Process ID	*/
+	public static final int getProcessId() {
+		return ID;
+	}
+
+	/**	 Getter Parameter Value for Process Value	*/
+	public static final String getProcessValue() {
+		return VALUE;
+	}
+
+	/**	 Getter Parameter Value for Process Name	*/
+	public static final String getProcessName() {
+		return NAME;
 	}
 }

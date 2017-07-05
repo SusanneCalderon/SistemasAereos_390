@@ -14,7 +14,7 @@
  * or via info@adempiere.net or http://www.adempiere.net/license.html         *
  *****************************************************************************/
 /** Generated Model - DO NOT CHANGE */
-package org.adempiere.model;
+package org.shw.model;
 
 import java.sql.ResultSet;
 import java.sql.Timestamp;

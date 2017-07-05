@@ -48,6 +48,8 @@ import javax.swing.LookAndFeel;
 import javax.swing.SwingUtilities;
 
 import org.adempiere.exceptions.ValueChangeListener;
+import org.adempiere.model.MPromotionGroupLine;
+import org.adempiere.model.MPromotionPreCondition;
 import org.compiere.apps.ADialog;
 import org.compiere.apps.AEnv;
 import org.compiere.apps.AWindow;
@@ -55,7 +57,6 @@ import org.compiere.apps.RecordInfo;
 import org.compiere.apps.search.Info;
 import org.compiere.apps.search.InfoBPartner;
 import org.compiere.apps.search.InfoFactory;
-import org.compiere.apps.search.InfoInvoice;
 import org.compiere.apps.search.InfoPriceRate;
 import org.compiere.apps.search.InfoProduct;
 import org.compiere.model.GridField;
@@ -63,17 +64,22 @@ import org.compiere.model.Lookup;
 import org.compiere.model.MBPartner;
 import org.compiere.model.MColumn;
 import org.compiere.model.MCommissionLine;
+import org.compiere.model.MField;
+import org.compiere.model.MInvoice;
+import org.compiere.model.MInvoiceBatch;
 import org.compiere.model.MInvoiceBatchLine;
 import org.compiere.model.MInvoiceLine;
 import org.compiere.model.MLookup;
 import org.compiere.model.MLookupFactory;
-import org.compiere.model.MMovementLine;
 import org.compiere.model.MOrderLine;
 import org.compiere.model.MPaymentAllocate;
+import org.compiere.model.MProductPO;
 import org.compiere.model.MProductPrice;
 import org.compiere.model.MQuery;
 import org.compiere.model.MRequisitionLine;
 import org.compiere.model.MRole;
+import org.compiere.model.MTable;
+import org.compiere.model.Query;
 import org.compiere.swing.CButton;
 import org.compiere.swing.CMenuItem;
 import org.compiere.swing.CTextField;
@@ -88,6 +94,7 @@ import org.compiere.util.Trx;
 import org.compiere.util.ValueNamePair;
 import org.eevolution.model.I_PP_Product_BOMLine;
 import org.eevolution.model.MPPProductBOMLine;
+import org.shw.model.MLGProductPriceRate;
 import org.shw.model.MLGRoute;
 
 /**
@@ -1049,18 +1056,22 @@ public class VLookup extends JComponent
 			//
 			if(m_mField != null)
 			{
+				multipleSelection = false;
 				int AD_Table_ID = MColumn.getTable_ID(Env.getCtx(), m_mField.getAD_Column_ID(), null);
+				MField field = new MField(Env.getCtx(), m_mField.getAD_Field_ID(), null);
+				multipleSelection = field.get_ValueAsBoolean("IsMultiselection");
 				// TODO hard-coded - add to AD_Column?
+				if (!multipleSelection)
 				multipleSelection = (MOrderLine.Table_ID ==  AD_Table_ID) || 
 									(MInvoiceLine.Table_ID == AD_Table_ID) || 
 									(I_PP_Product_BOMLine.Table_ID == AD_Table_ID) || 
-									(MProductPrice.Table_ID == AD_Table_ID 	|| 
-									MCommissionLine.Table_ID == AD_Table_ID ||
-									MPPProductBOMLine.Table_ID == AD_Table_ID ||
-									MRequisitionLine.Table_ID== AD_Table_ID ||
-									MCommissionLine.Table_ID == AD_Table_ID ||
-									MMovementLine.Table_ID == AD_Table_ID)									
-									;
+									(MProductPrice.Table_ID == AD_Table_ID) ||
+									(MPromotionGroupLine.Table_ID == AD_Table_ID) ||
+									(MPPProductBOMLine.Table_ID == AD_Table_ID) ||
+									(MPPProductBOMLine.Table_ID == AD_Table_ID) ||
+									(1000026 == AD_Table_ID) ||
+									(MRequisitionLine.Table_ID== AD_Table_ID ||
+									MCommissionLine.Table_ID == AD_Table_ID);
 			}
 			//	Show Info
 			InfoProduct ip = new InfoProduct (frame, true, m_lookup.getWindowNo(),
@@ -1069,28 +1080,6 @@ public class VLookup extends JComponent
 			cancelled = ip.isCancelled();
 			result = ip.getSelectedKeys();
 			resetValue = true;
-		}
-		else if (col.equals("C_Invoice_ID"))
-		{
-			//	Reset
-			resetTabInfo();
-			//
-			if(m_mField != null)
-			{
-				int AD_Table_ID = MColumn.getTable_ID(Env.getCtx(), m_mField.getAD_Column_ID(), null);
-				// TODO hard-coded - add to AD_Column?
-				multipleSelection  = (MPaymentAllocate.Table_ID ==  AD_Table_ID)	 || 
-						(MInvoiceBatchLine.Table_ID == AD_Table_ID)
-									;
-			}
-			//	Show Info
-			InfoInvoice ip = new InfoInvoice (frame, true,m_lookup.getWindowNo(), record_id,queryValue,	multipleSelection,true,  whereClause);
-			ip.setVisible(true);
-			cancelled = ip.isCancelled();
-			result = ip.getSelectedKeys();
-			resetValue = true;
-		
-			
 		}
 		else if (col.equals("C_BPartner_ID"))
 		{
@@ -1106,12 +1095,50 @@ public class VLookup extends JComponent
 				Trx.get(trxName, false).close();
 			}
 			//
+			if(m_mField != null)
+			{
+				int AD_Table_ID = MColumn.getTable_ID(Env.getCtx(), m_mField.getAD_Column_ID(), null);
+				// TODO hard-coded - add to AD_Column?
+				multipleSelection = (MPromotionPreCondition.Table_ID ==  AD_Table_ID) || 
+									(MInvoiceBatch.Table_ID == AD_Table_ID ) ||
+									(MProductPO.Table_ID == AD_Table_ID||
+									1000025 == AD_Table_ID);
+			}
 			InfoBPartner ip = new InfoBPartner (frame, true, m_lookup.getWindowNo(), record_id,
 				queryValue, m_isSOTrx, m_isSOMatch, multipleSelection, true, whereClause);
 			ip.setVisible(true);
 			cancelled = ip.isCancelled();
 			result = ip.getSelectedKeys();
-		}else if (col.equals("LG_Route_ID"))
+		}
+		else if (col.equals("C_Invoice_ID"))
+		{
+			resetTabInfo();
+			//
+			setIsSOTrx(m_isSOTrxEnvOverride, false);
+			//  If we have a record id, set isSOMatch
+			if (record_id > 0)
+			{
+				String trxName = Trx.createTrxName();
+				MInvoice invoice = new MInvoice(Env.getCtx(), record_id, trxName);
+				m_isSOMatch = (m_isSOTrx && invoice.isSOTrx());
+				Trx.get(trxName, false).close();
+			}
+			//
+			if(m_mField != null)
+			{
+				int AD_Table_ID = MColumn.getTable_ID(Env.getCtx(), m_mField.getAD_Column_ID(), null);
+				// TODO hard-coded - add to AD_Column?
+				multipleSelection = (MPaymentAllocate.Table_ID ==  AD_Table_ID) || 
+									(MInvoiceBatchLine.Table_ID == AD_Table_ID) ||
+									(170 == AD_Table_ID);
+			}
+			Info ig = Info.create (frame, true, m_lookup.getWindowNo(), m_tableName, 
+					m_keyColumnName, record_id, queryValue, multipleSelection, true, whereClause);
+			ig.setVisible(true);
+			cancelled = ig.isCancelled();
+			result = ig.getSelectedKeys();
+		}
+		else if (col.equals("LG_Route_ID"))
 		{
 			resetTabInfo();
 			//
@@ -1175,6 +1202,14 @@ public class VLookup extends JComponent
 				}
 			}
 			//
+			if(m_mField != null)
+			{
+				int AD_Table_ID = MColumn.getTable_ID(Env.getCtx(), m_mField.getAD_Column_ID(), null);
+				// TODO hard-coded - add to AD_Column?
+				multipleSelection = (1000009 == AD_Table_ID) ||
+									(1000008 == AD_Table_ID || AD_Table_ID==749
+									);
+			}
 			Info ig = Info.create (frame, true, m_lookup.getWindowNo(), m_tableName, 
 					m_keyColumnName, record_id, queryValue, multipleSelection, true, whereClause);
 			ig.setVisible(true);
@@ -1460,6 +1495,8 @@ public class VLookup extends JComponent
 			sql.append("SELECT C_BPartner_ID FROM C_BPartner WHERE (");
 			//	Put query string in Name if not fully numeric
     		if (!text.matches(".*\\D+.*")) // If text has no non-digit characters ...
+    			sql.append("UPPER(Value) LIKE ").append(DB.TO_STRING(text));
+    		else if (text.length() < 10)	
     			//  search against the Value field
 				sql.append("UPPER(Value) LIKE ").append(DB.TO_STRING(text));
     		else
