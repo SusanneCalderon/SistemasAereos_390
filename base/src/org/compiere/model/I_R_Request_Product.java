@@ -1,6 +1,6 @@
 /******************************************************************************
- * Product: Adempiere ERP & CRM Smart Business Solution                       *
- * Copyright (C) 1999-2007 ComPiere, Inc. All Rights Reserved.                *
+ * Product: ADempiere ERP & CRM Smart Business Solution                       *
+ * Copyright (C) 2006-2016 ADempiere Foundation, All Rights Reserved.         *
  * This program is free software, you can redistribute it and/or modify it    *
  * under the terms version 2 of the GNU General Public License as published   *
  * by the Free Software Foundation. This program is distributed in the hope   *
@@ -11,27 +11,26 @@
  * with this program, if not, write to the Free Software Foundation, Inc.,    *
  * 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA.                     *
  * For the text or an alternative of this public license, you may reach us    *
- * ComPiere, Inc., 2620 Augustine Dr. #245, Santa Clara, CA 95054, USA        *
- * or via info@compiere.org or http://www.compiere.org/license.html           *
+ * or via info@adempiere.net or http://www.adempiere.net/license.html         *
  *****************************************************************************/
-package org.shw.model;
+package org.compiere.model;
 
 import java.math.BigDecimal;
 import java.sql.Timestamp;
 import org.compiere.model.*;
 import org.compiere.util.KeyNamePair;
 
-/** Generated Interface for LG_Request_ProductPriceRate
+/** Generated Interface for R_Request_Product
  *  @author Adempiere (generated) 
- *  @version Release 3.8.0
+ *  @version Release 3.9.0
  */
-public interface I_LG_Request_ProductPriceRate 
+public interface I_R_Request_Product 
 {
 
-    /** TableName=LG_Request_ProductPriceRate */
-    public static final String Table_Name = "LG_Request_ProductPriceRate";
+    /** TableName=R_Request_Product */
+    public static final String Table_Name = "R_Request_Product";
 
-    /** AD_Table_ID=3000269 */
+    /** AD_Table_ID=3000282 */
     public static final int Table_ID = MTable.getTable_ID(Table_Name);
 
     KeyNamePair Model = new KeyNamePair(Table_ID, Table_Name);
@@ -92,47 +91,33 @@ public interface I_LG_Request_ProductPriceRate
 	  */
 	public boolean isActive();
 
-    /** Column name LG_ProductPriceRate_ID */
-    public static final String COLUMNNAME_LG_ProductPriceRate_ID = "LG_ProductPriceRate_ID";
+    /** Column name IsMandatory */
+    public static final String COLUMNNAME_IsMandatory = "IsMandatory";
 
-	/** Set LG_ProductPriceRate ID	  */
-	public void setLG_ProductPriceRate_ID (int LG_ProductPriceRate_ID);
-
-	/** Get LG_ProductPriceRate ID	  */
-	public int getLG_ProductPriceRate_ID();
-
-    /** Column name LG_Request_ProductPriceRate_ID */
-    public static final String COLUMNNAME_LG_Request_ProductPriceRate_ID = "LG_Request_ProductPriceRate_ID";
-
-	/** Set LG_Request_ProductPriceRate ID	  */
-	public void setLG_Request_ProductPriceRate_ID (int LG_Request_ProductPriceRate_ID);
-
-	/** Get LG_Request_ProductPriceRate ID	  */
-	public int getLG_Request_ProductPriceRate_ID();
-
-    /** Column name LG_TransportType */
-    public static final String COLUMNNAME_LG_TransportType = "LG_TransportType";
-
-	/** Set Tipo transporte	  */
-	public void setLG_TransportType (String LG_TransportType);
-
-	/** Get Tipo transporte	  */
-	public String getLG_TransportType();
-
-    /** Column name M_Shipper_ID */
-    public static final String COLUMNNAME_M_Shipper_ID = "M_Shipper_ID";
-
-	/** Set Shipper.
-	  * Method or manner of product delivery
+	/** Set Mandatory.
+	  * Data entry is required in this column
 	  */
-	public void setM_Shipper_ID (int M_Shipper_ID);
+	public void setIsMandatory (boolean IsMandatory);
 
-	/** Get Shipper.
-	  * Method or manner of product delivery
+	/** Get Mandatory.
+	  * Data entry is required in this column
 	  */
-	public int getM_Shipper_ID();
+	public boolean isMandatory();
 
-	public org.compiere.model.I_M_Shipper getM_Shipper() throws RuntimeException;
+    /** Column name M_Product_ID */
+    public static final String COLUMNNAME_M_Product_ID = "M_Product_ID";
+
+	/** Set Product.
+	  * Product, Service, Item
+	  */
+	public void setM_Product_ID (int M_Product_ID);
+
+	/** Get Product.
+	  * Product, Service, Item
+	  */
+	public int getM_Product_ID();
+
+	public org.compiere.model.I_M_Product getM_Product() throws RuntimeException;
 
     /** Column name R_Request_ID */
     public static final String COLUMNNAME_R_Request_ID = "R_Request_ID";
@@ -149,6 +134,15 @@ public interface I_LG_Request_ProductPriceRate
 
 	public org.compiere.model.I_R_Request getR_Request() throws RuntimeException;
 
+    /** Column name R_Request_Product_ID */
+    public static final String COLUMNNAME_R_Request_Product_ID = "R_Request_Product_ID";
+
+	/** Set R_Request_Product ID	  */
+	public void setR_Request_Product_ID (int R_Request_Product_ID);
+
+	/** Get R_Request_Product ID	  */
+	public int getR_Request_Product_ID();
+
     /** Column name Updated */
     public static final String COLUMNNAME_Updated = "Updated";
 
@@ -164,4 +158,17 @@ public interface I_LG_Request_ProductPriceRate
 	  * User who updated this records
 	  */
 	public int getUpdatedBy();
+
+    /** Column name ValidFrom */
+    public static final String COLUMNNAME_ValidFrom = "ValidFrom";
+
+	/** Set Valid from.
+	  * Valid from including this date (first day)
+	  */
+	public void setValidFrom (Timestamp ValidFrom);
+
+	/** Get Valid from.
+	  * Valid from including this date (first day)
+	  */
+	public Timestamp getValidFrom();
 }

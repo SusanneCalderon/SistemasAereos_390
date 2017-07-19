@@ -1,6 +1,6 @@
 /******************************************************************************
- * Product: ADempiere ERP & CRM Smart Business Solution                       *
- * Copyright (C) 2006-2016 ADempiere Foundation, All Rights Reserved.         *
+ * Product: Adempiere ERP & CRM Smart Business Solution                       *
+ * Copyright (C) 1999-2007 ComPiere, Inc. All Rights Reserved.                *
  * This program is free software, you can redistribute it and/or modify it    *
  * under the terms version 2 of the GNU General Public License as published   *
  * by the Free Software Foundation. This program is distributed in the hope   *
@@ -11,26 +11,27 @@
  * with this program, if not, write to the Free Software Foundation, Inc.,    *
  * 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA.                     *
  * For the text or an alternative of this public license, you may reach us    *
- * or via info@adempiere.net or http://www.adempiere.net/license.html         *
+ * ComPiere, Inc., 2620 Augustine Dr. #245, Santa Clara, CA 95054, USA        *
+ * or via info@compiere.org or http://www.compiere.org/license.html           *
  *****************************************************************************/
-package org.shw.model;
+package org.compiere.model;
 
 import java.math.BigDecimal;
 import java.sql.Timestamp;
 import org.compiere.model.*;
 import org.compiere.util.KeyNamePair;
 
-/** Generated Interface for R_Request_Product
+/** Generated Interface for C_RFQ_C_Bpartner
  *  @author Adempiere (generated) 
- *  @version Release 3.9.0
+ *  @version Release 3.8.0
  */
-public interface I_R_Request_Product 
+public interface I_C_RFQ_C_Bpartner 
 {
 
-    /** TableName=R_Request_Product */
-    public static final String Table_Name = "R_Request_Product";
+    /** TableName=C_RFQ_C_Bpartner */
+    public static final String Table_Name = "C_RFQ_C_Bpartner";
 
-    /** AD_Table_ID=3000282 */
+    /** AD_Table_ID=3000267 */
     public static final int Table_ID = MTable.getTable_ID(Table_Name);
 
     KeyNamePair Model = new KeyNamePair(Table_ID, Table_Name);
@@ -62,6 +63,45 @@ public interface I_R_Request_Product
 	  */
 	public int getAD_Org_ID();
 
+    /** Column name C_BPartner_ID */
+    public static final String COLUMNNAME_C_BPartner_ID = "C_BPartner_ID";
+
+	/** Set Business Partner .
+	  * Identifies a Business Partner
+	  */
+	public void setC_BPartner_ID (int C_BPartner_ID);
+
+	/** Get Business Partner .
+	  * Identifies a Business Partner
+	  */
+	public int getC_BPartner_ID();
+
+	public org.compiere.model.I_C_BPartner getC_BPartner() throws RuntimeException;
+
+    /** Column name C_RFQ_C_Bpartner_ID */
+    public static final String COLUMNNAME_C_RFQ_C_Bpartner_ID = "C_RFQ_C_Bpartner_ID";
+
+	/** Set C_RFQ_C_Bpartner ID	  */
+	public void setC_RFQ_C_Bpartner_ID (int C_RFQ_C_Bpartner_ID);
+
+	/** Get C_RFQ_C_Bpartner ID	  */
+	public int getC_RFQ_C_Bpartner_ID();
+
+    /** Column name C_RfQ_ID */
+    public static final String COLUMNNAME_C_RfQ_ID = "C_RfQ_ID";
+
+	/** Set RfQ.
+	  * Request for Quotation
+	  */
+	public void setC_RfQ_ID (int C_RfQ_ID);
+
+	/** Get RfQ.
+	  * Request for Quotation
+	  */
+	public int getC_RfQ_ID();
+
+	public I_C_ValidCombination getC_RfQ() throws RuntimeException;
+
     /** Column name Created */
     public static final String COLUMNNAME_Created = "Created";
 
@@ -91,58 +131,6 @@ public interface I_R_Request_Product
 	  */
 	public boolean isActive();
 
-    /** Column name IsMandatory */
-    public static final String COLUMNNAME_IsMandatory = "IsMandatory";
-
-	/** Set Mandatory.
-	  * Data entry is required in this column
-	  */
-	public void setIsMandatory (boolean IsMandatory);
-
-	/** Get Mandatory.
-	  * Data entry is required in this column
-	  */
-	public boolean isMandatory();
-
-    /** Column name M_Product_ID */
-    public static final String COLUMNNAME_M_Product_ID = "M_Product_ID";
-
-	/** Set Product.
-	  * Product, Service, Item
-	  */
-	public void setM_Product_ID (int M_Product_ID);
-
-	/** Get Product.
-	  * Product, Service, Item
-	  */
-	public int getM_Product_ID();
-
-	public org.compiere.model.I_M_Product getM_Product() throws RuntimeException;
-
-    /** Column name R_Request_ID */
-    public static final String COLUMNNAME_R_Request_ID = "R_Request_ID";
-
-	/** Set Request.
-	  * Request from a Business Partner or Prospect
-	  */
-	public void setR_Request_ID (int R_Request_ID);
-
-	/** Get Request.
-	  * Request from a Business Partner or Prospect
-	  */
-	public int getR_Request_ID();
-
-	public org.compiere.model.I_R_Request getR_Request() throws RuntimeException;
-
-    /** Column name R_Request_Product_ID */
-    public static final String COLUMNNAME_R_Request_Product_ID = "R_Request_Product_ID";
-
-	/** Set R_Request_Product ID	  */
-	public void setR_Request_Product_ID (int R_Request_Product_ID);
-
-	/** Get R_Request_Product ID	  */
-	public int getR_Request_Product_ID();
-
     /** Column name Updated */
     public static final String COLUMNNAME_Updated = "Updated";
 
@@ -158,17 +146,4 @@ public interface I_R_Request_Product
 	  * User who updated this records
 	  */
 	public int getUpdatedBy();
-
-    /** Column name ValidFrom */
-    public static final String COLUMNNAME_ValidFrom = "ValidFrom";
-
-	/** Set Valid from.
-	  * Valid from including this date (first day)
-	  */
-	public void setValidFrom (Timestamp ValidFrom);
-
-	/** Get Valid from.
-	  * Valid from including this date (first day)
-	  */
-	public Timestamp getValidFrom();
 }

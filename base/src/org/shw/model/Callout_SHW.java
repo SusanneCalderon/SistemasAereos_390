@@ -17,16 +17,19 @@
 
 package org.shw.model;
 
+import java.math.BigDecimal;
 import java.util.Properties;
 
 import org.compiere.model.CalloutEngine;
 import org.compiere.model.GridField;
 import org.compiere.model.GridTab;
+import org.compiere.model.MConversionRate;
 import org.compiere.model.MDocType;
 import org.compiere.model.MInvoiceBatch;
 import org.compiere.model.MOrder;
 import org.compiere.model.MPayment;
 import org.compiere.model.MTab;
+import org.compiere.model.MUOMConversion;
 import org.compiere.util.Env;
 
 /**
@@ -76,6 +79,9 @@ public class Callout_SHW extends CalloutEngine
 	   
        return "";
    }
+   
+   
+  
    
 }
 

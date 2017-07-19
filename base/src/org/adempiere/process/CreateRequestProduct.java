@@ -18,7 +18,7 @@ package org.adempiere.process;
 
 import java.math.BigDecimal;
 
-import org.shw.model.X_R_Request_Product;
+import org.compiere.model.X_R_Request_Product;
 import org.compiere.model.MRequest;
 import org.eevolution.model.MPPProductBOM;
 import org.eevolution.model.MPPProductBOMLine;

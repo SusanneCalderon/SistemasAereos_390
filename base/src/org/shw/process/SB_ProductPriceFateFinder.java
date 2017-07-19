@@ -16,8 +16,9 @@
 
 package org.shw.process;
 
-import org.shw.model.X_LG_Request_ProductPriceRate;
-import org.shw.model.X_R_Request_Product;
+import org.compiere.model.X_LG_ProductPriceRate;
+import org.compiere.model.X_LG_Request_ProductPriceRate;
+import org.compiere.model.X_R_Request_Product;
 
 /** Generated Process for (SB_ProductPriceFateFinder)
  *  @author ADempiere (generated) 
@@ -36,9 +37,12 @@ public class SB_ProductPriceFateFinder extends SB_ProductPriceFateFinderAbstract
 	{
 		for (int LG_ProductPriceRate_ID: getSelectionKeys())
 		{
+			X_LG_ProductPriceRate ppr = new X_LG_ProductPriceRate(getCtx(), LG_ProductPriceRate_ID, get_TrxName());
 			X_LG_Request_ProductPriceRate requestppr = new X_LG_Request_ProductPriceRate(getCtx(), 0, get_TrxName());
 			requestppr.setR_Request_ID(getRecord_ID());
 			requestppr.setLG_ProductPriceRate_ID(LG_ProductPriceRate_ID);
+			requestppr.setC_UOM_Volume_ID(ppr.getC_UOM_Volume_ID());
+			requestppr.setC_UOM_Weight_ID(ppr.getC_UOM_Weight_ID());
 			requestppr.saveEx();
 		}
 		return "";

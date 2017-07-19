@@ -60,9 +60,9 @@ public class LG_WMInOutBound extends MWMInOutBound
 		for (MWMInOutBoundLine ioLine:getLines(true, ""))
 		{
 			MOrder order = new MOrder(Env.getCtx(), 0, get_TrxName());
-			order.setC_Project_ID(getC_Project_ID());
+			order.setC_Project_ID(get_ValueAsInt("C_Project_ID"));
 			MOrderLine oLine = new MOrderLine(order);
-			oLine.setC_Project_ID(getC_Project_ID());
+			oLine.setC_Project_ID(get_ValueAsInt(MProject.COLUMNNAME_C_Project_ID));
 		}
 	}
 
@@ -87,7 +87,7 @@ public class LG_WMInOutBound extends MWMInOutBound
 		MProject project = new MProject(Env.getCtx(), 0, innerTrxName);
 		MWMInOutBound loadingguide = new MWMInOutBound(Env.getCtx(), 0, innerTrxName);
 		loadingguide.setDocumentNo(documentno);
-		loadingguide.setC_Project_ID(project.getC_Project_ID());
+		//loadingguide.set_ValueOfColumn(MProject.COLUMNNAME_C_Project_ID), project.getC_Project_ID());
 	}
 	
 	public static void fillLoadingGuide(String documentno, Object Bookings)
@@ -97,7 +97,7 @@ public class LG_WMInOutBound extends MWMInOutBound
 		MWMInOutBound loadingguide = new Query(Env.getCtx(), MWMInOutBound.Table_Name, MWMInOutBound.COLUMNNAME_DocumentNo + "=?", innerTrxName)
 			.firstOnly();
 		MWMInOutBoundLine ioLine = new MWMInOutBoundLine(loadingguide);
-		ioLine.setC_Project_ID(loadingguide.getC_Project_ID());
+		ioLine.setC_Project_ID(loadingguide.get_ValueAsInt(MProject.COLUMNNAME_C_Project_ID));
 	}
 	
 	

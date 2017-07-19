@@ -26,10 +26,16 @@ import java.util.Calendar;
 import java.util.List;
 import java.util.Properties;
 import java.util.logging.Level;
+import java.util.function.BiFunction;
+import java.util.function.Consumer;
+import java.util.function.Function;
+import java.util.function.Predicate;
 
 import org.compiere.acct.Doc;
 import org.compiere.acct.Fact;
 import org.compiere.acct.FactLine;
+import org.compiere.model.GridField;
+import org.compiere.model.GridTab;
 import org.compiere.model.I_C_Invoice;
 import org.compiere.model.I_C_Order;
 import org.compiere.model.MAccount;
@@ -71,11 +77,13 @@ import org.compiere.model.MProjectIssue;
 import org.compiere.model.MRequest;
 import org.compiere.model.MRequisition;
 import org.compiere.model.MRole;
+import org.compiere.model.MShipper;
 import org.compiere.model.MStatus;
 import org.compiere.model.MTaxCategory;
 import org.compiere.model.MTree;
 import org.compiere.model.MTree_Base;
 import org.compiere.model.MTree_Node;
+import org.compiere.model.MUOM;
 import org.compiere.model.MUOMConversion;
 import org.compiere.model.MUser;
 import org.compiere.model.ModelValidationEngine;
@@ -85,6 +93,8 @@ import org.compiere.model.ProductCost;
 import org.compiere.model.Query;
 import org.compiere.model.X_C_Order;
 import org.compiere.model.X_LG_ProductPriceRate;
+import org.compiere.model.X_LG_Route;
+import org.compiere.model.X_R_Request_Package;
 import org.compiere.print.MPrintFormatItem;
 import org.compiere.process.ProcessInfo;
 import org.compiere.util.CLogger;
@@ -100,6 +110,7 @@ import org.eevolution.model.MHRProcess;
 import org.eevolution.model.MPPOrder;
 import org.eevolution.model.MWMInOutBound;
 import org.eevolution.model.MWMInOutBoundLine;
+import org.compiere.model.X_LG_Request_ProductPriceRate;
 import org.python.antlr.ast.GeneratorExp.generators_descriptor;
 
 
@@ -127,6 +138,8 @@ public class SAValidatorNEW implements ModelValidator
 	private int		m_AD_User_ID = -1;
 	/** Role	*/
 	private int		m_AD_Role_ID = -1;
+	Function<Integer,String> converter = (num)-> Integer.toString(num);
+	Runnable r1 = () -> System.out.println("VVV");
 
 	
 	/**
@@ -153,6 +166,7 @@ public class SAValidatorNEW implements ModelValidator
 			engine.addModelChange(MOrderLine.Table_Name, this);
 			engine.addModelChange(MPaymentAllocate.Table_Name, this);
 			engine.addModelChange(MRequest.Table_Name, this);
+			engine.addModelChange(X_R_Request_Package.Table_Name	, this);
 		
 		//	We want to validate Order before preparing 
 			engine.addDocValidate(MOrder.Table_Name, this);
@@ -313,6 +327,24 @@ public class SAValidatorNEW implements ModelValidator
 			error = SaveRequestTree(po);
 			if (type == TYPE_BEFORE_CHANGE || type == TYPE_BEFORE_NEW)
 				RequestSavaParent(po);
+		}
+		if (po.get_TableName().equals(X_R_Request_Package.Table_Name))
+		{
+			Boolean isChanged = (po.is_ValueChanged("C_UOM_Weight_ID") 
+					|| po.is_ValueChanged("C_UOM_Volume_ID") 
+					|| po.is_ValueChanged("Qty")
+					|| po.is_ValueChanged("Volume") 
+					|| po.is_ValueChanged("Weight")				
+					);
+			Boolean isChangedDim = (po.is_ValueChanged("Height") 
+					|| po.is_ValueChanged("Width") 
+					|| po.is_ValueChanged("Length")
+					|| po.is_ValueChanged("C_UOM_Length_ID") 
+					);
+			if (isChanged && (type== TYPE_AFTER_CHANGE || type == TYPE_AFTER_NEW))
+				error = convertPackage(po);
+			if (isChangedDim && (type== TYPE_AFTER_CHANGE || type == TYPE_AFTER_NEW))
+				error = calculateDimensionalWeight(po);
 		}
 		
 
@@ -675,7 +707,7 @@ public class SAValidatorNEW implements ModelValidator
 			{
 				MOrder order = new Query(A_PO.getCtx(), MOrder.Table_Name, "C_Project_ID=? and c_bpartner_ID=?", iobound.get_TrxName())
 				.setOnlyActiveRecords(true)
-				.setParameters(iobound.getC_Project_ID(), ioLine.get_ValueAsInt(MOrder.COLUMNNAME_C_BPartner_ID))
+				.setParameters(iobound.get_Value(MProject.COLUMNNAME_C_Project_ID), ioLine.get_ValueAsInt(MOrder.COLUMNNAME_C_BPartner_ID))
 				.first();
 				MBPartner bPartner = new MBPartner(A_PO.getCtx(), ioLine.get_ValueAsInt(MOrder.COLUMNNAME_C_BPartner_ID), A_PO.get_TrxName());
 				if (order == null)
@@ -685,7 +717,7 @@ public class SAValidatorNEW implements ModelValidator
 					order.setDateOrdered(Env.getContextAsDate(iobound.getCtx(), "#Date"));
 					order.setC_BPartner_ID(bPartner.getC_BPartner_ID());
 					order.setM_PriceList_ID(bPartner.getM_PriceList_ID());
-					order.setC_Project_ID(iobound.getC_Project_ID());
+					order.setC_Project_ID(iobound.get_ValueAsInt(MProject.COLUMNNAME_C_Project_ID));
 					if (!OrdersetBPartner(order, bPartner.getC_BPartner_ID(), bPartner.getC_PaymentTerm_ID()))
 						return "no fue posible crear la orden de venta";
 					order.setSalesRep_ID(bPartner.getSalesRep_ID());
@@ -1909,14 +1941,77 @@ private String RequestSavaParent(PO A_PO)
 
 private String test (PO A_PO)
 {
-	String A_TrxName = A_PO.get_TrxName();
-	MPrintFormatItem pfi = (MPrintFormatItem)A_PO;
+	return converter.apply(100);
+}
 
-	String sql = "update ad_printformatitem_trl set printname = ? where ad_printformatitem_ID = ?";
-	ArrayList<Object> params = new ArrayList<>();
-	params.add(pfi.getPrintName());
-	params.add(pfi.getAD_PrintFormatItem_ID());
-	DB.executeUpdateEx(sql, params.toArray(), A_TrxName);
+
+public String convertPackage (PO A_PO)
+{
+	Integer R_Request_ID = A_PO.get_ValueAsInt("R_Request_ID");
+	Function<MRequest, Boolean> convertAndAggregate = (request)-> 
+	{
+		BigDecimal result_weight = Env.ZERO;
+		BigDecimal result_volume = Env.ZERO;
+		List<X_R_Request_Package> packages = new Query(A_PO.getCtx(), X_R_Request_Package.Table_Name, R_Request_ID + "=?", A_PO.get_TrxName())
+				.setParameters(R_Request_ID)
+				.list();
+		for (X_R_Request_Package pack : packages)
+		{			
+			String columnName = "C_UOM_Weight_ID";
+			BigDecimal convertedresult = MUOMConversion.convert(pack.get_ValueAsInt(columnName), request.get_ValueAsInt(columnName), pack.getQty(), true);
+			result_weight = result_weight.add(convertedresult);
+
+			columnName = "C_UOM_Volume_ID";
+			convertedresult = MUOMConversion.convert(pack.get_ValueAsInt(columnName), request.get_ValueAsInt(columnName), pack.getQty(), true);
+			result_weight = result_volume.add(convertedresult);
+		}
+		request.set_ValueOfColumn("C_UOM_Weight_ID", result_weight);
+		request.set_ValueOfColumn("C_UOM_Volume_ID", result_volume);
+		return true;
+	};
+
+	Predicate<String> transportTypeAir = (s)-> s.equals(X_LG_Route.LG_TRANSPORTTYPE_Air);
+    MRequest request = new MRequest(A_PO.getCtx(), R_Request_ID, A_PO.get_TrxName());
+    Boolean result = convertAndAggregate.apply(request);
+    request.saveEx();
+	return "";
+}
+
+public String calculateDimensionalWeight (PO A_PO)
+{
+	Integer R_Request_ID = A_PO.get_ValueAsInt("R_Request_ID");
+	Function<String,BigDecimal> convertAndAggregate = (columnName)-> 
+	{
+		BigDecimal result = Env.ZERO;
+		List<X_R_Request_Package> packages = new Query(A_PO.getCtx(), X_R_Request_Package.Table_Name, R_Request_ID + "=?", A_PO.get_TrxName())
+				.setParameters(R_Request_ID)
+				.list();
+		for (X_R_Request_Package pack : packages)
+		{					
+			BigDecimal qty = (BigDecimal)pack.get_Value(columnName);
+			qty = MUOMConversion.convert(pack.getC_UOM_Length_ID(), 100, qty, true);
+			result = result.add(qty);	
+		}
+		return result;
+	};
+	
+	Predicate<String> transportTypeAir = (s)-> s.equals(X_LG_Route.LG_TRANSPORTTYPE_Air);
+	
+	BigDecimal height = convertAndAggregate.apply("Height");
+	BigDecimal width = convertAndAggregate.apply("Width");
+	BigDecimal length = convertAndAggregate.apply("Length");
+	BigDecimal qty = convertAndAggregate.apply("Qty");
+	BigDecimal dimension = height.multiply(width).multiply(length).multiply(qty);
+	List<X_LG_Request_ProductPriceRate> reqpprs = new Query(A_PO.getCtx(), X_LG_Request_ProductPriceRate.Table_Name, "R_Request_ID=?", A_PO.get_TrxName())
+			.setParameters(R_Request_ID)
+			.setOnlyActiveRecords(true)
+			.list();
+	reqpprs.stream().filter(reqppr -> reqppr != null  && transportTypeAir.test(reqppr.getLG_TransportType()))
+    .forEach(reqppr -> {
+    	MShipper shipper = (MShipper)reqppr.getM_Shipper();
+    	BigDecimal dimWeight = dimension.divide((BigDecimal)shipper.get_Value("dimensionalFactor"), 2);
+    	dimWeight = MUOMConversion.convert(100,reqppr.get_ValueAsInt("C_UOM_Weight_ID"), dimWeight, true);    	
+    });
 	return "";
 }
 	

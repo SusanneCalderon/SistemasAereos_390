@@ -378,7 +378,7 @@ public class LogisticValidator implements ModelValidator
 			{
 				MOrder order = new Query(A_PO.getCtx(), MOrder.Table_Name, "C_Project_ID=? and c_bpartner_ID=?", iobound.get_TrxName())
 				.setOnlyActiveRecords(true)
-				.setParameters(iobound.getC_Project_ID(), ioLine.get_ValueAsInt(MOrder.COLUMNNAME_C_BPartner_ID))
+				.setParameters(iobound.get_Value(MProject.COLUMNNAME_C_Project_ID), ioLine.get_ValueAsInt(MOrder.COLUMNNAME_C_BPartner_ID))
 				.first();
 				MBPartner bPartner = new MBPartner(A_PO.getCtx(), ioLine.get_ValueAsInt(MOrder.COLUMNNAME_C_BPartner_ID), A_PO.get_TrxName());
 				if (order == null)
@@ -388,7 +388,7 @@ public class LogisticValidator implements ModelValidator
 					order.setDateOrdered(Env.getContextAsDate(iobound.getCtx(), "#Date"));
 					order.setC_BPartner_ID(bPartner.getC_BPartner_ID());
 					order.setM_PriceList_ID(bPartner.getM_PriceList_ID());
-					order.setC_Project_ID(iobound.getC_Project_ID());
+					order.setC_Project_ID(iobound.get_ValueAsInt(MProject.COLUMNNAME_C_Project_ID));
 					if (!OrdersetBPartner(order, bPartner.getC_BPartner_ID(), bPartner.getC_PaymentTerm_ID()))
 						return "no fue posible crear la orden de venta";
 					order.setSalesRep_ID(bPartner.getSalesRep_ID());

@@ -37,8 +37,8 @@ import org.compiere.process.SvrProcess;
 import org.compiere.util.Env;
 import org.shw.model.MLGProductPriceRate;
 import org.shw.model.MLGProductPriceRateLine;
-import org.shw.model.X_LG_Request_ProductPriceRate;
-import org.shw.model.X_R_Request_Product;
+import org.compiere.model.X_LG_Request_ProductPriceRate;
+import org.compiere.model.X_R_Request_Product;
 
 /**
  *  Creates Payment from c_invoice, including Aging

@@ -20,7 +20,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.logging.Level;
 
-import org.shw.model.X_C_RFQ_C_Bpartner;
+import org.compiere.model.X_C_RFQ_C_Bpartner;
 import org.compiere.model.MBPartner;
 import org.compiere.model.MRfQ;
 import org.compiere.model.MRfQResponse;

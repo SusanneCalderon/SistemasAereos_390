@@ -34,7 +34,7 @@ import org.compiere.process.ProcessInfoParameter;
 import org.compiere.process.SvrProcess;
 import org.compiere.util.DB;
 import org.compiere.util.Env;
-import org.shw.model.X_C_RFQ_C_Bpartner;
+import org.compiere.model.X_C_RFQ_C_Bpartner;
 
 /**
  *  Creates Payment from c_invoice, including Aging
